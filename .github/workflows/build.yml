@@ -2,7 +2,7 @@ name: Build
 
 on:
   pull_request:
-    branches: [sit, qa, prerelease, master]
+    branches: [master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

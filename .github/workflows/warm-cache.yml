@@ -2,7 +2,7 @@ name: Warm Cache
 
 on:
   push:
-    branches: [sit, qa, prerelease, master]
+    branches: [master]
 
 jobs:
   warm-cache:
