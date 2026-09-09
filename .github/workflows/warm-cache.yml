@@ -1,15 +1,11 @@
-name: Build
+name: Warm Cache
 
 on:
-  pull_request:
+  push:
     branches: [sit, qa, prerelease, master]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build:
+  warm-cache:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,9 +19,3 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Test
-        run: dotnet test --no-build --configuration Release
