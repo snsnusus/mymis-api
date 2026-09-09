@@ -1,4 +1,4 @@
-# SourcefitClone.Api
+# MyMIS-API
 
 A .NET Web API backend for an internal MIS/HR system, built as a companion to
 the `sourcefit-clone-portal` frontend. This project serves a dual purpose:
