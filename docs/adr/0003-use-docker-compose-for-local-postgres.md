@@ -23,7 +23,7 @@ reproducible by someone else setting up the project fresh.
 
 Define local development dependencies in a `docker-compose.yml` file
 at the repo root, starting with a single `postgres:17` service. A
-named volume (`sourcefitclone-pgdata`) is used to persist database
+named volume (`mymis-pgdata`) is used to persist database
 data independently of the container's own lifecycle.
 
 ## Consequences

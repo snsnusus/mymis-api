@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MyMIS.Api.Tests/MyMIS.Api.Tests.csproj" />
+  <Project Path="MyMIS.Api/MyMIS.Api.csproj" />
+</Solution>

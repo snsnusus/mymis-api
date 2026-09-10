@@ -1,0 +1,21 @@
+name: Promote sit to qa
+
+on:
+  push:
+    branches: [sit]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create promotion PR
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTION_PAT }}
+        run: |
+          gh pr create \
+            --repo ${{ github.repository }} \
+            --base qa \
+            --head sit \
+            --title "Promote sit to qa" \
+            --body "Automated promotion PR." \
+            || echo "PR may already exist, skipping."

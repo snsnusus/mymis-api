@@ -1,0 +1,21 @@
+name: Promote prerelease to master
+
+on:
+  push:
+    branches: [prerelease]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create promotion PR
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTION_PAT }}
+        run: |
+          gh pr create \
+            --repo ${{ github.repository }} \
+            --base master \
+            --head prerelease \
+            --title "Promote prerelease to master" \
+            --body "Automated promotion PR." \
+            || echo "PR may already exist, skipping."

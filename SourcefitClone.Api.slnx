@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="SourcefitClone.Api.Tests/SourcefitClone.Api.Tests.csproj" />
-  <Project Path="SourcefitClone.Api/SourcefitClone.Api.csproj" />
-</Solution>

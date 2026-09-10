@@ -1,0 +1,21 @@
+name: Promote qa to prerelease
+
+on:
+  push:
+    branches: [qa]
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create promotion PR
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTION_PAT }}
+        run: |
+          gh pr create \
+            --repo ${{ github.repository }} \
+            --base prerelease \
+            --head qa \
+            --title "Promote qa to prerelease" \
+            --body "Automated promotion PR." \
+            || echo "PR may already exist, skipping."

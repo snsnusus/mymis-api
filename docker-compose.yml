@@ -2,15 +2,15 @@
 services:
   postgres:
     image: postgres:17
-    container_name: sourcefitclone-postgres
+    container_name: mymis-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: localdevpassword
-      POSTGRES_DB: SourcefitClone
+      POSTGRES_DB: MyMIS
     ports:
       - "5432:5432"
     volumes:
-      - sourcefitclone-pgdata:/var/lib/postgresql/data
+      - mymis-pgdata:/var/lib/postgresql/data
 
 volumes:
-  sourcefitclone-pgdata:
+  mymis-pgdata:

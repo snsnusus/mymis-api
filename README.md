@@ -1,25 +1,28 @@
-# SourcefitClone.Api
+# MyMIS.Api
 
 A .NET Web API backend for an internal MIS/HR system, built as a companion to
-the `sourcefit-clone-portal` frontend. This project serves a dual purpose:
+the `mymis-portal` frontend.
+
+This project serves a dual purpose:
 building a real backend, and deepening C#/.NET backend expertise as part of a
 structured, hands-on learning plan.
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
+| Layer                | Choice                                           |
+| -------------------- | ------------------------------------------------ |
 | Language / Framework | C# / .NET 10, ASP.NET Core Web API (Controllers) |
-| ORM | Entity Framework Core |
-| Database | PostgreSQL 17 (local via Docker Compose) |
-| API docs | Scalar (`Scalar.AspNetCore`) |
-| Password hashing | `BCrypt.Net-Next` |
-| Testing | xUnit + EF Core InMemory provider |
-| CI | GitHub Actions |
+| ORM                  | Entity Framework Core                            |
+| Database             | PostgreSQL 17 (local via Docker Compose)         |
+| API docs             | Scalar (`Scalar.AspNetCore`)                     |
+| Password hashing     | `BCrypt.Net-Next`                                |
+| Testing              | xUnit + EF Core InMemory provider                |
+| CI                   | GitHub Actions                                   |
 
 ## Getting Started
 
 ### Prerequisites
+
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - Docker (via Docker Desktop or Rancher Desktop) for local PostgreSQL
 - `dotnet user-secrets` for local configuration (no secrets are committed to
@@ -28,29 +31,33 @@ structured, hands-on learning plan.
 ### Setup
 
 1. Clone the repo:
+
    ```bash
-   git clone https://github.com/snsnusus/sourcefit-clone-api.git
-   cd sourcefit-clone-api
+   git clone https://github.com/snsnusus/mymis-api.git
+   cd mymis-api
    ```
 
 2. Start the local PostgreSQL container:
+
    ```bash
    docker compose up -d
    ```
 
 3. Restore dependencies:
+
    ```bash
    dotnet restore
    ```
 
 4. Apply database migrations:
+
    ```bash
-   dotnet ef database update --project SourcefitClone.Api
+   dotnet ef database update --project MyMIS.Api
    ```
 
 5. Run the API:
    ```bash
-   dotnet run --project SourcefitClone.Api
+   dotnet run --project MyMIS.Api
    ```
 
 ### Running Tests
@@ -65,19 +72,19 @@ run the test suite.
 ## Project Structure
 
 ```
-sourcefit-clone-api/
+mymis-api/
 ├── .github/workflows/          ← CI and branch promotion automation
 ├── docs/adr/                   ← Architecture Decision Records
 ├── docker-compose.yml          ← local Postgres container + volume
-├── SourcefitClone.sln
-├── SourcefitClone.Api/         ← main project
+├── MyMIS.sln
+├── MyMIS.Api/         ← main project
 │   ├── Controllers/
 │   ├── Models/
 │   ├── DTOs/
 │   ├── Services/
 │   ├── Data/
 │   └── Migrations/
-└── SourcefitClone.Api.Tests/   ← xUnit test project
+└── MyMIS.Api.Tests/   ← xUnit test project
 ```
 
 ## Branching & Promotion Strategy
