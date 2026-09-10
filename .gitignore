@@ -19,3 +19,5 @@ appsettings.*.json
 
 ## Docker
 docker-compose.override.yml
+
+local.env
