@@ -8,6 +8,7 @@ using MyMIS.Api.Data;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,12 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<IAuthorizationHandler, DepartmentScopeHandler>();
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -59,14 +66,16 @@ builder.Services.AddAuthorizationBuilder()
         policy.Requirements.Add(new DepartmentScopeRequirement()));
 
 
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Configuration.GetValue<bool>("Features:EnableApiDocs"))
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 
