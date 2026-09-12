@@ -1,24 +1,24 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Scalar.AspNetCore;
 using MyMIS.Api.Authorization;
 using MyMIS.Api.Data;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
+using Scalar.AspNetCore;
 using System.Text;
-using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
     ?? throw new InvalidOperationException("Jwt configuration section is missing.");
 
-// Add services to the container.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -65,7 +65,15 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("DepartmentScope", policy =>
         policy.Requirements.Add(new DepartmentScopeRequirement()));
 
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PortalPolicy", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
@@ -79,7 +87,10 @@ app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 
+app.UseCors("PortalPolicy");
+
 app.UseAuthentication();
+
 app.UseAuthorization();
 
 app.MapControllers();
