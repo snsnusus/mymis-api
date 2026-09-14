@@ -37,4 +37,7 @@ public class Employee
     public Role Role { get; set; } = Role.User;
 
     public string? AvatarUrl { get; set; }
+
+    public EmployeePersonalDetail? PersonalDetail { get; set; }
+    public ICollection<EmployeeHobby> EmployeeHobbies { get; set; } = [];
 }
