@@ -16,12 +16,18 @@ public class EmployeeService(AppDbContext context)
             {
                 Id = e.Id,
                 FirstName = e.FirstName,
+                MiddleName = e.MiddleName,
                 LastName = e.LastName,
-                Nickname = e.Nickname,
+                Suffix = e.Suffix,
+                AvatarUrl = e.AvatarUrl,
                 Gender = e.Gender,
+                Birthdate = e.Birthdate,
                 MaritalStatus = e.MaritalStatus,
                 OfficeLocation = e.OfficeLocation,
+                WorkSchedule = e.WorkSchedule,
                 EmployeeCode = e.EmployeeCode,
+                Username = e.Username,
+                DepartmentId = e.DepartmentId,
                 DepartmentName = e.Department != null ? e.Department.Name : null
             })
             .ToListAsync();
@@ -38,13 +44,28 @@ public class EmployeeService(AppDbContext context)
         {
             Id = employee.Id,
             FirstName = employee.FirstName,
+            MiddleName = employee.MiddleName,
             LastName = employee.LastName,
+            Suffix = employee.Suffix,
+            AvatarUrl = employee.AvatarUrl,
             Gender = employee.Gender,
+            Birthdate = employee.Birthdate,
             MaritalStatus = employee.MaritalStatus,
             OfficeLocation = employee.OfficeLocation,
+            WorkSchedule = employee.WorkSchedule,
             EmployeeCode = employee.EmployeeCode,
+            Username = employee.Username,
+            DepartmentId = employee.DepartmentId,
             DepartmentName = employee.Department?.Name,
-            Nickname = employee.Nickname,
+            PersonalDetail = employee.PersonalDetail is null ? null : new EmployeePersonalDetailDto
+            {
+                Nickname = employee.PersonalDetail.Nickname,
+                Birthplace = employee.PersonalDetail.Birthplace,
+                Nationality = employee.PersonalDetail.Nationality,
+                BloodType = employee.PersonalDetail.BloodType,
+                Religion = employee.PersonalDetail.Religion,
+                Bio = employee.PersonalDetail.Bio
+            }
         };
     }
     public async Task<EmployeeResponseDto> CreateAsync(EmployeeCreateDto dto)
@@ -102,13 +123,13 @@ public class EmployeeService(AppDbContext context)
     }
     public async Task<EmployeeResponseDto?> UpdateSelfAsync(int employeeId, EmployeeSelfUpdateDto dto)
     {
-        var employee = await _context.Employees.FindAsync(employeeId);
-        if (employee is null) return null;
+        var personalDetail = await _context.EmployeePersonalDetails.FirstOrDefaultAsync(pd => pd.EmployeeId == employeeId);
+        if (personalDetail is null) return null;
 
-        employee.Nickname = dto.Nickname;
+        personalDetail.Nickname = dto.Nickname;
 
         await _context.SaveChangesAsync();
-        return await GetByIdAsync(employee.Id);
+        return await GetByIdAsync(personalDetail.Id);
     }
     public async Task<(bool Exists, int? DepartmentId)> GetExistenceAndDepartmentAsync(int id)
     {

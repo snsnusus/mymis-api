@@ -3,12 +3,34 @@ namespace MyMIS.Api.DTOs;
 public class EmployeeResponseDto
 {
     public int Id { get; set; }
+
     public string FirstName { get; set; } = string.Empty;
+
+    public string? MiddleName { get; set; }
+
     public string LastName { get; set; } = string.Empty;
+
+    public string? Suffix { get; set; }
+
+    public string? AvatarUrl { get; set; }
+
     public string Gender { get; set; } = string.Empty;
-    public string? Nickname { get; set; }
+
+    public DateOnly? Birthdate { get; set; }
+
     public string MaritalStatus { get; set; } = string.Empty;
+
     public string? OfficeLocation { get; set; }
+
+    public string? WorkSchedule { get; set; }
+
     public string EmployeeCode { get; set; } = string.Empty;
-    public string? DepartmentName { get; set; } // flattened from the related Department, not a raw FK
+
+    public string Username { get; set; } = string.Empty;
+
+    public int? DepartmentId { get; set; }
+
+    public string? DepartmentName { get; set; }
+
+    public EmployeePersonalDetailDto? PersonalDetail { get; set; }
 }
