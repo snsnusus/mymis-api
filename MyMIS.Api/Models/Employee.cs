@@ -22,7 +22,7 @@ public class Employee
 
     public required string Gender { get; set; }
 
-    public DateOnly Birthdate { get; set; }
+    public DateOnly? Birthdate { get; set; }
 
     public required string MaritalStatus { get; set; }
 

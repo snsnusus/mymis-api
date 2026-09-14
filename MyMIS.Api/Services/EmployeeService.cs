@@ -129,7 +129,7 @@ public class EmployeeService(AppDbContext context)
         personalDetail.Nickname = dto.Nickname;
 
         await _context.SaveChangesAsync();
-        return await GetByIdAsync(personalDetail.Id);
+        return await GetByIdAsync(personalDetail.EmployeeId);
     }
     public async Task<(bool Exists, int? DepartmentId)> GetExistenceAndDepartmentAsync(int id)
     {
