@@ -35,4 +35,6 @@ public class Employee
     public string PasswordHash { get; set; } = string.Empty;
     public DateTime? DeletedAt { get; set; }
     public Role Role { get; set; } = Role.User;
+
+    public string? AvatarUrl { get; set; }
 }
