@@ -28,7 +28,16 @@ public class EmployeeService(AppDbContext context)
                 EmployeeCode = e.EmployeeCode,
                 Username = e.Username,
                 DepartmentId = e.DepartmentId,
-                DepartmentName = e.Department != null ? e.Department.Name : null
+                DepartmentName = e.Department != null ? e.Department.Name : null,
+                PersonalDetail = e.PersonalDetail == null ? null : new EmployeePersonalDetailDto
+                {
+                    Nickname = e.PersonalDetail.Nickname,
+                    Birthplace = e.PersonalDetail.Birthplace,
+                    Nationality = e.PersonalDetail.Nationality,
+                    BloodType = e.PersonalDetail.BloodType,
+                    Religion = e.PersonalDetail.Religion,
+                    Bio = e.PersonalDetail.Bio
+                }
             })
             .ToListAsync();
     }
@@ -36,6 +45,7 @@ public class EmployeeService(AppDbContext context)
     {
         var employee = await _context.Employees
             .Include(e => e.Department)
+            .Include(e => e.PersonalDetail)
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (employee is null) return null;
@@ -80,7 +90,7 @@ public class EmployeeService(AppDbContext context)
             OfficeLocation = dto.OfficeLocation,
             Username = dto.Username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            DepartmentId = dto.DepartmentId
+            DepartmentId = dto.DepartmentId,
         };
 
         _context.Employees.Add(employee);
