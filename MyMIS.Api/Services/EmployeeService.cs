@@ -83,14 +83,28 @@ public class EmployeeService(AppDbContext context)
         var employee = new Employee
         {
             FirstName = dto.FirstName,
+            MiddleName = dto.MiddleName,
             LastName = dto.LastName,
+            Suffix = dto.Suffix,
+            AvatarUrl = dto.AvatarUrl,
             Gender = dto.Gender,
+            Birthdate = dto.Birthdate,
             MaritalStatus = dto.MaritalStatus,
             EmployeeCode = dto.EmployeeCode,
             OfficeLocation = dto.OfficeLocation,
+            WorkSchedule = dto.WorkSchedule,
             Username = dto.Username,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             DepartmentId = dto.DepartmentId,
+            PersonalDetail = new EmployeePersonalDetail
+            {
+                Nickname = dto.PersonalDetail?.Nickname,
+                Birthplace = dto.PersonalDetail?.Birthplace,
+                Nationality = dto.PersonalDetail?.Nationality,
+                BloodType = dto.PersonalDetail?.BloodType,
+                Religion = dto.PersonalDetail?.Religion,
+                Bio = dto.PersonalDetail?.Bio
+            }
         };
 
         _context.Employees.Add(employee);
@@ -105,11 +119,16 @@ public class EmployeeService(AppDbContext context)
         if (employee is null) return null;
 
         employee.FirstName = dto.FirstName;
+        employee.MiddleName = dto.MiddleName;
         employee.LastName = dto.LastName;
+        employee.Suffix = dto.Suffix;
+        employee.AvatarUrl = dto.AvatarUrl;
         employee.Gender = dto.Gender;
+        employee.Birthdate = dto.Birthdate;
         employee.MaritalStatus = dto.MaritalStatus;
         employee.EmployeeCode = dto.EmployeeCode;
         employee.OfficeLocation = dto.OfficeLocation;
+        employee.WorkSchedule = dto.WorkSchedule;
         employee.Username = dto.Username;
         employee.DepartmentId = dto.DepartmentId;
 

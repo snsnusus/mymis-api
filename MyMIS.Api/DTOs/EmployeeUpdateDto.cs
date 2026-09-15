@@ -7,11 +7,19 @@ public class EmployeeUpdateDto
     [Required, MaxLength(100)]
     public string FirstName { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    public string? MiddleName { get; set; }
+
     [Required, MaxLength(100)]
     public string LastName { get; set; } = string.Empty;
 
+    [MaxLength(20)]
+    public string? Suffix { get; set; }
+
     [Required]
     public string Gender { get; set; } = string.Empty;
+
+    public DateOnly? Birthdate { get; set; }
 
     [Required]
     public string MaritalStatus { get; set; } = string.Empty;
@@ -21,6 +29,8 @@ public class EmployeeUpdateDto
 
     public string? OfficeLocation { get; set; }
 
+    public string? WorkSchedule { get; set; }
+
     [Required]
     public string Username { get; set; } = string.Empty;
 
@@ -29,4 +39,6 @@ public class EmployeeUpdateDto
     public string? Password { get; set; }
 
     public int? DepartmentId { get; set; }
+
+    public string? AvatarUrl { get; set; }
 }
