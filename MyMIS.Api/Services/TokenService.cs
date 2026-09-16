@@ -27,6 +27,11 @@ public class TokenService(IOptions<JwtOptions> jwtOptions)
             claims.Add(new Claim("departmentId", employee.DepartmentId.Value.ToString()));
         }
 
+        foreach (var employeePermission in employee.EmployeePermissions)
+        {
+            claims.Add(new Claim("permission", employeePermission.Permission.Name));
+        }
+
         var key = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(_jwtOptions.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

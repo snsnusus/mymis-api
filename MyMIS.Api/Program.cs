@@ -28,6 +28,7 @@ builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<IAuthorizationHandler, DepartmentScopeHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -63,7 +64,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("DepartmentScope", policy =>
-        policy.Requirements.Add(new DepartmentScopeRequirement()));
+        policy.Requirements.Add(new DepartmentScopeRequirement()))
+    .AddPolicy("employees.create", policy =>
+        policy.Requirements.Add(new PermissionRequirement("employees.create")))
+    .AddPolicy("employees.update", policy =>
+        policy.Requirements.Add(new PermissionRequirement("employees.update")));
 
 builder.Services.AddCors(options =>
 {
