@@ -30,7 +30,7 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
         return Ok(employee);
     }
 
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Policy = "employees.create")]
     [HttpPost]
     public async Task<ActionResult<EmployeeResponseDto>> Create(EmployeeCreateDto dto)
     {
