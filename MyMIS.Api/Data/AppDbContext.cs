@@ -11,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Hobby> Hobbies => Set<Hobby>();
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<EmployeePermission> EmployeePermissions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,5 +62,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne(eh => eh.Hobby)
             .WithMany(h => h.EmployeeHobbies)
             .HasForeignKey(eh => eh.HobbyId);
+
+        modelBuilder.Entity<EmployeePermission>()
+            .HasKey(ep => new { ep.EmployeeId, ep.PermissionId });
+
+        modelBuilder.Entity<EmployeePermission>()
+            .HasOne(ep => ep.Employee)
+            .WithMany(e => e.EmployeePermissions)
+            .HasForeignKey(ep => ep.EmployeeId);
+
+        modelBuilder.Entity<EmployeePermission>()
+            .HasOne(ep => ep.Permission)
+            .WithMany()
+            .HasForeignKey(ep => ep.PermissionId);
+
+        modelBuilder.Entity<Permission>()
+            .HasIndex(p => p.Name)
+            .IsUnique();
     }
 }
