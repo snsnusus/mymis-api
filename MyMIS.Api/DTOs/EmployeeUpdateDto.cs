@@ -38,7 +38,7 @@ public class EmployeeUpdateDto
     [MinLength(8)]
     public string? Password { get; set; }
 
-    public int? DepartmentId { get; set; }
-
     public string? AvatarUrl { get; set; }
+
+    public EmployeePersonalDetailUpdateDto? PersonalDetail { get; set; }
 }

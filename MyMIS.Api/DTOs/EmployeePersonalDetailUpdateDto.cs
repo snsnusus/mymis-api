@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MyMIS.Api.DTOs;
 
-public class EmployeeSelfUpdateDto
+public class EmployeePersonalDetailUpdateDto
 {
     public string? Nickname { get; set; }
 

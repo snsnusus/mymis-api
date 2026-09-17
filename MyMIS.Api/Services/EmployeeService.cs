@@ -115,7 +115,10 @@ public class EmployeeService(AppDbContext context)
     }
     public async Task<EmployeeResponseDto?> UpdateAsync(int id, EmployeeUpdateDto dto)
     {
-        var employee = await _context.Employees.FindAsync(id);
+        var employee = await _context.Employees
+            .Include(e => e.PersonalDetail)
+            .FirstOrDefaultAsync(e => e.Id == id);
+
         if (employee is null) return null;
 
         employee.FirstName = dto.FirstName;
@@ -130,7 +133,6 @@ public class EmployeeService(AppDbContext context)
         employee.OfficeLocation = dto.OfficeLocation;
         employee.WorkSchedule = dto.WorkSchedule;
         employee.Username = dto.Username;
-        employee.DepartmentId = dto.DepartmentId;
 
         // Only re-hash if a new password was actually provided
         if (!string.IsNullOrWhiteSpace(dto.Password))
@@ -138,9 +140,50 @@ public class EmployeeService(AppDbContext context)
             employee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
         }
 
+        employee.PersonalDetail ??= new EmployeePersonalDetail();
+        employee.PersonalDetail.Nickname = dto.PersonalDetail?.Nickname;
+        employee.PersonalDetail.Birthplace = dto.PersonalDetail?.Birthplace;
+        employee.PersonalDetail.Nationality = dto.PersonalDetail?.Nationality;
+        employee.PersonalDetail.BloodType = dto.PersonalDetail?.BloodType;
+        employee.PersonalDetail.Religion = dto.PersonalDetail?.Religion;
+        employee.PersonalDetail.Bio = dto.PersonalDetail?.Bio;
+
         await _context.SaveChangesAsync();
         return await GetByIdAsync(employee.Id);
     }
+
+    public async Task<EmployeeResponseDto?> UpdateSelfAsync(int employeeId, EmployeeSelfUpdateDto dto)
+    {
+        var employee = await _context.Employees
+        .Include(e => e.PersonalDetail)
+        .FirstOrDefaultAsync(e => e.Id == employeeId);
+
+        if (employee is null) return null;
+
+        employee.PersonalDetail ??= new EmployeePersonalDetail();
+        employee.PersonalDetail.Nickname = dto.Nickname;
+        employee.PersonalDetail.Birthplace = dto.Birthplace;
+        employee.PersonalDetail.Nationality = dto.Nationality;
+        employee.PersonalDetail.BloodType = dto.BloodType;
+        employee.PersonalDetail.Religion = dto.Religion;
+        employee.PersonalDetail.Bio = dto.Bio;
+
+        await _context.SaveChangesAsync();
+        return await GetByIdAsync(employee.Id);
+    }
+
+    public async Task<EmployeeResponseDto?> UpdatePartialAsync(int id, EmployeePartialUpdateDto dto)
+    {
+        var employee = await _context.Employees.FindAsync(id);
+        if (employee is null) return null;
+
+        employee.OfficeLocation = dto.OfficeLocation;
+        employee.WorkSchedule = dto.WorkSchedule;
+
+        await _context.SaveChangesAsync();
+        return await GetByIdAsync(employee.Id);
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         var employee = await _context.Employees.FindAsync(id);
@@ -150,16 +193,7 @@ public class EmployeeService(AppDbContext context)
         await _context.SaveChangesAsync();
         return true;
     }
-    public async Task<EmployeeResponseDto?> UpdateSelfAsync(int employeeId, EmployeeSelfUpdateDto dto)
-    {
-        var personalDetail = await _context.EmployeePersonalDetails.FirstOrDefaultAsync(pd => pd.EmployeeId == employeeId);
-        if (personalDetail is null) return null;
 
-        personalDetail.Nickname = dto.Nickname;
-
-        await _context.SaveChangesAsync();
-        return await GetByIdAsync(personalDetail.EmployeeId);
-    }
     public async Task<(bool Exists, int? DepartmentId)> GetExistenceAndDepartmentAsync(int id)
     {
         var employee = await _context.Employees.FindAsync(id);

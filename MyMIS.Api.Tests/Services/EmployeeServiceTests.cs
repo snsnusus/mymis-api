@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
@@ -196,6 +197,444 @@ public class EmployeeServiceTests : IDisposable
 
         Assert.NotNull(rawRow);
         Assert.NotNull(rawRow.DeletedAt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PersonalDetailProvided_PersistsAllSixFields()
+    {
+        // Arrange
+        var createDto = new EmployeeCreateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            Password = "irrelevant-for-this-test",
+        };
+        var created = await _service.CreateAsync(createDto);
+
+        var employeeUpdateDto = new EmployeeUpdateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            PersonalDetail = new EmployeePersonalDetailUpdateDto
+            {
+                Nickname = "JSmith",
+                Birthplace = "Texas",
+                Nationality = "American",
+                BloodType = "AB+",
+                Religion = "Baptist",
+                Bio = "This is a sample bio...",
+            },
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(created.Id, employeeUpdateDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.PersonalDetail);
+        Assert.Equal("JSmith", result.PersonalDetail.Nickname);
+        Assert.Equal("Texas", result.PersonalDetail.Birthplace);
+        Assert.Equal("American", result.PersonalDetail.Nationality);
+        Assert.Equal("AB+", result.PersonalDetail.BloodType);
+        Assert.Equal("Baptist", result.PersonalDetail.Religion);
+        Assert.Equal("This is a sample bio...", result.PersonalDetail.Bio);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_EmployeeHasNoExistingPersonalDetailRow_CreatesOneWithoutThrowing()
+    {
+        // Arrange
+        var employee = new Employee
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            PasswordHash = "irrelevant-for-this-test"
+        };
+        _context.Employees.Add(employee);
+        await _context.SaveChangesAsync();
+
+        var employeeUpdateDto = new EmployeeUpdateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            PersonalDetail = new EmployeePersonalDetailUpdateDto
+            {
+                Nickname = "John",
+                Birthplace = "Malibu",
+                Nationality = "America",
+                BloodType = "B+",
+                Religion = "Catholic",
+                Bio = "This is a sample bio..."
+            }
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(employee.Id, employeeUpdateDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.PersonalDetail);
+        Assert.Equal("John", result.PersonalDetail.Nickname);
+        Assert.Equal("Malibu", result.PersonalDetail.Birthplace);
+        Assert.Equal("America", result.PersonalDetail.Nationality);
+        Assert.Equal("B+", result.PersonalDetail.BloodType);
+        Assert.Equal("Catholic", result.PersonalDetail.Religion);
+        Assert.Equal("This is a sample bio...", result.PersonalDetail.Bio);
+
+        var savedPersonalDetail = await _context.EmployeePersonalDetails
+            .FirstOrDefaultAsync(pd => pd.EmployeeId == employee.Id);
+
+        Assert.NotNull(savedPersonalDetail);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PersonalDetailFieldOmitted_ClearsThatFieldToNull()
+    {
+        // Arrange
+        var employee = new Employee
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            PersonalDetail = new EmployeePersonalDetail
+            {
+                Nickname = "John",
+                Bio = "My name is John."
+            }
+        };
+        _context.Employees.Add(employee);
+        await _context.SaveChangesAsync();
+
+        var updateDto = new EmployeeUpdateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            PersonalDetail = new EmployeePersonalDetailUpdateDto
+            {
+                Nickname = "JSmith",
+            }
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(employee.Id, updateDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.PersonalDetail);
+        Assert.Equal("JSmith", result.PersonalDetail.Nickname);
+        Assert.Null(result.PersonalDetail.Bio);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PersonalDetailOmittedEntirely_ClearsAllPersonalDetailFields()
+    {
+        // Arrange
+        var employee = new Employee
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+            PersonalDetail = new EmployeePersonalDetail
+            {
+                Nickname = "John",
+                Birthplace = "California",
+                Nationality = "American",
+                BloodType = "O+",
+                Religion = "Christian",
+                Bio = "My name is John."
+            }
+        };
+        _context.Employees.Add(employee);
+        await _context.SaveChangesAsync();
+
+        var updateDto = new EmployeeUpdateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "Male",
+            MaritalStatus = "Married",
+            EmployeeCode = "EMP002",
+            Username = "jsmith",
+        };
+
+        // Act
+        var result = await _service.UpdateAsync(employee.Id, updateDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.PersonalDetail);
+        Assert.Null(result.PersonalDetail.Nickname);
+        Assert.Null(result.PersonalDetail.Birthplace);
+        Assert.Null(result.PersonalDetail.Nationality);
+        Assert.Null(result.PersonalDetail.BloodType);
+        Assert.Null(result.PersonalDetail.Religion);
+        Assert.Null(result.PersonalDetail.Bio);
+    }
+
+    [Fact]
+    public async Task UpdateSelfAsync_NoPersonalDetailRowExists_CreatesOneWithoutThrowing()
+    {
+        // Arrange
+        var employee = new Employee
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "MALE",
+            MaritalStatus = "SINGLE",
+            EmployeeCode = "EMP-2026-001",
+            Username = "jsmith",
+            PasswordHash = "irrelevant-for-this-test"
+        };
+        _context.Employees.Add(employee);
+        await _context.SaveChangesAsync();
+
+        var selfUpdateDto = new EmployeeSelfUpdateDto
+        {
+            Nickname = "Johny",
+            Birthplace = "California",
+            Nationality = "American",
+            BloodType = "AB+",
+            Religion = "Catholic",
+            Bio = "My name is John Smith..."
+        };
+
+        // Act
+        var result = await _service.UpdateSelfAsync(employee.Id, selfUpdateDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.PersonalDetail);
+
+        Assert.Equal("Johny", result.PersonalDetail.Nickname);
+        Assert.Equal("California", result.PersonalDetail.Birthplace);
+        Assert.Equal("American", result.PersonalDetail.Nationality);
+        Assert.Equal("AB+", result.PersonalDetail.BloodType);
+        Assert.Equal("Catholic", result.PersonalDetail.Religion);
+        Assert.Equal("My name is John Smith...", result.PersonalDetail.Bio);
+
+        var savedPersonalDetail = await _context.EmployeePersonalDetails
+            .FirstOrDefaultAsync(pd => pd.EmployeeId == employee.Id);
+
+        Assert.NotNull(savedPersonalDetail);
+    }
+
+    [Fact]
+    public async Task UpdateSelfAsync_NonExistentEmployeeId_ReturnsNull()
+    {
+        // Arrange
+        var selfUpdateDto = new EmployeeSelfUpdateDto
+        {
+            Nickname = "Johny",
+            Birthplace = "Manila",
+            Nationality = "Filipino",
+            BloodType = "A+",
+            Religion = "Baptist",
+            Bio = "This is johny..."
+        };
+
+        // Act
+        var result = await _service.UpdateSelfAsync(999, selfUpdateDto);
+
+        // Assert
+        Assert.Null(result);
+
+        var savedPersonalDetailsCount = await _context.EmployeePersonalDetails.CountAsync();
+
+        Assert.Equal(0, savedPersonalDetailsCount);
+    }
+
+    [Fact]
+    public async Task UpdateSelfAsync_ValidRequest_PersistsAllSixFields()
+    {
+        // Arrange
+        var createDto = new EmployeeCreateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "MALE",
+            MaritalStatus = "SINGLE",
+            EmployeeCode = "EMP-001",
+            Username = "jsmith",
+            Password = "irrelevant-to-this-test"
+        };
+
+        var createdResult = await _service.CreateAsync(createDto);
+
+        var selfUpdateDto = new EmployeeSelfUpdateDto
+        {
+            Nickname = "Johny",
+            Birthplace = "Manila",
+            Nationality = "Filipino",
+            BloodType = "A+",
+            Religion = "Baptist",
+            Bio = "This is johny..."
+        };
+
+        // Act
+        var selfUpdateResult = await _service.UpdateSelfAsync(createdResult.Id, selfUpdateDto);
+
+        // Assert
+        Assert.NotNull(selfUpdateResult);
+        Assert.NotNull(selfUpdateResult.PersonalDetail);
+        Assert.Equal("Johny", selfUpdateResult.PersonalDetail.Nickname);
+        Assert.Equal("Manila", selfUpdateResult.PersonalDetail.Birthplace);
+        Assert.Equal("Filipino", selfUpdateResult.PersonalDetail.Nationality);
+        Assert.Equal("A+", selfUpdateResult.PersonalDetail.BloodType);
+        Assert.Equal("Baptist", selfUpdateResult.PersonalDetail.Religion);
+        Assert.Equal("This is johny...", selfUpdateResult.PersonalDetail.Bio);
+    }
+
+    [Fact]
+    public async Task UpdateSelfAsync_FieldOmitted_ClearsThatFieldToNull()
+    {
+        // Arrange
+        var employee = new Employee
+        {
+            FirstName = "Jazmine Ciel",
+            LastName = "Nares",
+            Gender = "FEMALE",
+            MaritalStatus = "SINGLE",
+            EmployeeCode = "EMP-001",
+            Username = "jazminecielnares",
+            PasswordHash = "irrelevant-for-this-test",
+            PersonalDetail = new EmployeePersonalDetail
+            {
+                Nickname = "Yel",
+                Bio = "Hello! My name is Jazmine Ciel..."
+            }
+        };
+        _context.Employees.Add(employee);
+        await _context.SaveChangesAsync();
+
+        var selfUpdateDto = new EmployeeSelfUpdateDto
+        {
+            Nickname = "Buyengyeng"
+        };
+
+        // Act
+        var result = await _service.UpdateSelfAsync(employee.Id, selfUpdateDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.PersonalDetail);
+        Assert.Equal("Buyengyeng", result.PersonalDetail.Nickname);
+        Assert.Null(result.PersonalDetail.Bio);
+    }
+
+    [Fact]
+    public async Task UpdatePartialAsync_ValidRequest_UpdatesOfficeLocationAndWorkSchedule()
+    {
+        // Arrange
+        var createDto = new EmployeeCreateDto
+        {
+            FirstName = "Sofia Leigh",
+            LastName = "Vargas",
+            Gender = "FEMALE",
+            MaritalStatus = "SINGLE",
+            EmployeeCode = "EMP-001",
+            Username = "sofialeighvargas",
+            Password = "irrelevant-to-this-test",
+            OfficeLocation = "Manila",
+            WorkSchedule = "Morning, 8AM - 5PM",
+            PersonalDetail = new EmployeePersonalDetailCreateDto
+            {
+                Nickname = "Lei"
+            }
+        };
+        var createResult = await _service.CreateAsync(createDto);
+        var partialUpdateDto = new EmployeePartialUpdateDto
+        {
+            OfficeLocation = "Pasig",
+            WorkSchedule = "Mid, 11AM - 9PM"
+        };
+
+        // Act
+        var partialUpdateResult = await _service.UpdatePartialAsync(createResult.Id, partialUpdateDto);
+
+        // Assert
+        Assert.NotNull(partialUpdateResult);
+
+        Assert.Equal("Pasig", partialUpdateResult.OfficeLocation);
+        Assert.Equal("Mid, 11AM - 9PM", partialUpdateResult.WorkSchedule);
+
+        Assert.NotNull(partialUpdateResult.PersonalDetail);
+        Assert.Equal("Lei", partialUpdateResult.PersonalDetail.Nickname);
+    }
+
+    [Fact]
+    public async Task UpdatePartialAsync_NonExistentId_ReturnsNull()
+    {
+        // Arrange
+        var updateDto = new EmployeePartialUpdateDto
+        {
+            OfficeLocation = "Manila",
+            WorkSchedule = "Mid, 11AM - 9PM"
+        };
+
+        // Act
+        var result = await _service.UpdatePartialAsync(999, updateDto);
+
+        // Assert
+        Assert.Null(result);
+        var savedEmployeeCount = await _context.Employees.CountAsync();
+        Assert.Equal(0, savedEmployeeCount);
+    }
+
+    [Fact]
+    public async Task UpdatePartialAsync_WorkScheduleOmitted_ClearsItToNull()
+    {
+        // Arrange
+        var createDto = new EmployeeCreateDto
+        {
+            FirstName = "John",
+            LastName = "Smith",
+            Gender = "MALE",
+            MaritalStatus = "SINGLE",
+            EmployeeCode = "EMP-001",
+            Username = "johnsmith",
+            Password = "irrelevant-for-this-test",
+            OfficeLocation = "Pasig",
+            WorkSchedule = "Morning, 8AM - 5PM",
+        };
+        var createResult = await _service.CreateAsync(createDto);
+        var updateDto = new EmployeePartialUpdateDto
+        {
+            OfficeLocation = "Manila"
+        };
+
+        // Act
+        var updateResult = await _service.UpdatePartialAsync(createResult.Id, updateDto);
+
+        // Assert
+        Assert.NotNull(updateResult);
+        Assert.Equal("Manila", updateResult.OfficeLocation);
+        Assert.Null(updateResult.WorkSchedule);
     }
 }
 

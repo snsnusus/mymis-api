@@ -38,19 +38,12 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
-    [Authorize(Roles = "Admin,SuperAdmin")]
+    [Authorize(Policy = "employees.update")]
     [HttpPut("{id}")]
     public async Task<ActionResult<EmployeeResponseDto>> Update(int id, EmployeeUpdateDto dto)
     {
-        var (exists, currentDepartmentId) = await _employeeService.GetExistenceAndDepartmentAsync(id);
-        if (!exists) return NotFound();
-
-        var targetDepartmentId = currentDepartmentId ?? -1;
-
-        var authResult = await _authorizationService.AuthorizeAsync(User, targetDepartmentId, "DepartmentScope");
-        if (!authResult.Succeeded) return Forbid();
-
         var updated = await _employeeService.UpdateAsync(id, dto);
+        if (updated is null) return NotFound();
         return Ok(updated);
     }
 
@@ -82,5 +75,21 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
         }
 
         return Ok(result);
+    }
+
+    [Authorize(Roles = "Admin,SuperAdmin")]
+    [HttpPut("partial/{id}")]
+    public async Task<ActionResult<EmployeeResponseDto>> UpdatePartial(int id, EmployeePartialUpdateDto dto)
+    {
+        var (exists, currentDepartmentId) = await _employeeService.GetExistenceAndDepartmentAsync(id);
+        if (!exists) return NotFound();
+
+        var targetDepartmentId = currentDepartmentId ?? -1;
+
+        var authResult = await _authorizationService.AuthorizeAsync(User, targetDepartmentId, "DepartmentScope");
+        if (!authResult.Succeeded) return Forbid();
+
+        var updated = await _employeeService.UpdatePartialAsync(id, dto);
+        return Ok(updated);
     }
 }
