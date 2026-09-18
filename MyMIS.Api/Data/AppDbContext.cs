@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Hobby> Hobbies => Set<Hobby>();
     public DbSet<Permission> Permissions { get; set; }
     public DbSet<EmployeePermission> EmployeePermissions { get; set; }
+    public DbSet<Position> Positions => Set<Position>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,5 +80,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Permission>()
             .HasIndex(p => p.Name)
             .IsUnique();
+
+        modelBuilder.Entity<Position>()
+            .HasOne(p => p.Department)
+            .WithMany()
+            .HasForeignKey(p => p.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Position>()
+            .HasIndex(p => new { p.DepartmentId, p.Slug }).IsUnique();
     }
 }
