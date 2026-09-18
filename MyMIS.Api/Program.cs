@@ -26,9 +26,12 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<PositionService>();
 builder.Services.AddScoped<TokenService>();
+
 builder.Services.AddScoped<IAuthorizationHandler, DepartmentScopeHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, SameDepartmentHandler>();
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -68,7 +71,13 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("employees.create", policy =>
         policy.Requirements.Add(new PermissionRequirement("employees.create")))
     .AddPolicy("employees.update", policy =>
-        policy.Requirements.Add(new PermissionRequirement("employees.update")));
+        policy.Requirements.Add(new PermissionRequirement("employees.update")))
+    .AddPolicy("positions.create", policy =>
+        policy.Requirements.Add(new PermissionRequirement("positions.create")))
+    .AddPolicy("positions.update", policy =>
+        policy.Requirements.Add(new PermissionRequirement("positions.update")))
+    .AddPolicy("SameDepartment", policy =>
+        policy.Requirements.Add(new SameDepartmentRequirement()));
 
 builder.Services.AddCors(options =>
 {
