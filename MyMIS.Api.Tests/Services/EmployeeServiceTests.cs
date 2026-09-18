@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using MyMIS.Api.Authorization;
-using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Tests.Authorization;
 
