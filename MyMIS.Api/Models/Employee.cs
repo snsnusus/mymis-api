@@ -55,5 +55,5 @@ public class Employee
 
     public ICollection<EmployeeHobby> EmployeeHobbies { get; set; } = [];
 
-    public ICollection<EmployeePermission> EmployeePermissions { get; set; } = new List<EmployeePermission>();
+    public ICollection<EmployeePermission> EmployeePermissions { get; set; } = [];
 }
