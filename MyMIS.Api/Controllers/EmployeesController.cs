@@ -92,4 +92,46 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
         var updated = await _employeeService.UpdatePartialAsync(id, dto);
         return Ok(updated);
     }
+
+    [Authorize]
+    [HttpPost("me/hobbies")]
+    public async Task<ActionResult<HobbyResponseDto>> LinkHobbyMe(HobbyCreateDto dto)
+    {
+        var employeeIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+        if (employeeIdClaim is null || !int.TryParse(employeeIdClaim, out var employeeId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _employeeService.LinkHobbyAsync(employeeId, dto.Name);
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpDelete("me/hobbies/{hobbyId}")]
+    public async Task<IActionResult> UnlinkHobbyMe(int hobbyId)
+    {
+        var employeeIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+        if (employeeIdClaim is null || !int.TryParse(employeeIdClaim, out var employeeId))
+        {
+            return Unauthorized();
+        }
+
+        var removed = await _employeeService.UnlinkHobbyAsync(employeeId, hobbyId);
+
+        if (!removed)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
 }
