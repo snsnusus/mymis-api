@@ -5,9 +5,10 @@ using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Services;
 
-public class EmployeeService(AppDbContext context)
+public class EmployeeService(AppDbContext context, HobbyService hobbyService)
 {
     private readonly AppDbContext _context = context;
+    private readonly HobbyService _hobbyService = hobbyService;
     public async Task<List<EmployeeResponseDto>> GetAllAsync()
     {
         return await _context.Employees
@@ -198,5 +199,40 @@ public class EmployeeService(AppDbContext context)
     {
         var employee = await _context.Employees.FindAsync(id);
         return employee is null ? (false, null) : (true, employee.DepartmentId);
+    }
+
+    public async Task<HobbyResponseDto?> LinkHobbyAsync(int employeeId, string hobbyName)
+    {
+        var employeeExists = await _context.Employees.AnyAsync(e => e.Id == employeeId);
+        if (!employeeExists) return null;
+
+        var hobby = await _hobbyService.GetOrCreateHobbyAsync(hobbyName);
+
+        var alreadyLinked = await _context.EmployeeHobbies
+            .AnyAsync(eh => eh.EmployeeId == employeeId && eh.HobbyId == hobby.Id);
+
+        if (!alreadyLinked)
+        {
+            _context.EmployeeHobbies.Add(new EmployeeHobby
+            {
+                EmployeeId = employeeId,
+                HobbyId = hobby.Id
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        return new HobbyResponseDto { Id = hobby.Id, Name = hobby.Name };
+    }
+
+    public async Task<bool> UnlinkHobbyAsync(int employeeId, int hobbyId)
+    {
+        var link = await _context.EmployeeHobbies
+            .FirstOrDefaultAsync(eh => eh.EmployeeId == employeeId && eh.HobbyId == hobbyId);
+
+        if (link is null) return false;
+
+        _context.EmployeeHobbies.Remove(link);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }
