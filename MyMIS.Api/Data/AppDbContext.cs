@@ -89,5 +89,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Position>()
             .HasIndex(p => new { p.DepartmentId, p.Slug }).IsUnique();
+
+        modelBuilder.Entity<Hobby>()
+            .HasIndex(h => h.NormalizedName)
+            .IsUnique();
     }
 }
