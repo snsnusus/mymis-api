@@ -93,5 +93,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Hobby>()
             .HasIndex(h => h.NormalizedName)
             .IsUnique();
+
+        modelBuilder.Entity<Employee>()
+            .HasOne(e => e.Position)
+            .WithMany()
+            .HasForeignKey(e => e.PositionId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

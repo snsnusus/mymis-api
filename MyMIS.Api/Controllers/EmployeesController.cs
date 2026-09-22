@@ -15,7 +15,7 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
 
     [Authorize]
     [HttpGet]
-    public async Task<ActionResult<List<EmployeeResponseDto>>> GetAll()
+    public async Task<ActionResult<List<EmployeeSummaryResponseDto>>> GetAll()
     {
         var employees = await _employeeService.GetAllAsync();
         return Ok(employees);

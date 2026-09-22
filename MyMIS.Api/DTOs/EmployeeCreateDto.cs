@@ -7,8 +7,8 @@ public class EmployeeCreateDto
     [Required, MaxLength(100)]
     public string FirstName { get; set; } = string.Empty;
 
-    [MaxLength(100)]
-    public string? MiddleName { get; set; }
+    [Required, MaxLength(100)]
+    public string MiddleName { get; set; } = string.Empty;
 
     [Required, MaxLength(100)]
     public string LastName { get; set; } = string.Empty;
@@ -38,6 +38,8 @@ public class EmployeeCreateDto
     public string Password { get; set; } = string.Empty; // plain text ONLY at this boundary — hashed immediately in the service
 
     public int? DepartmentId { get; set; }
+
+    public int? PositionId { get; set; }
 
     public string? AvatarUrl { get; set; }
 

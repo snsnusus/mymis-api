@@ -10,8 +10,9 @@ public class Employee
     [MaxLength(100)]
     public string FirstName { get; set; } = string.Empty;
 
+    [Required]
     [MaxLength(100)]
-    public string? MiddleName { get; set; }
+    public string MiddleName { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(100)]
@@ -56,4 +57,8 @@ public class Employee
     public ICollection<EmployeeHobby> EmployeeHobbies { get; set; } = [];
 
     public ICollection<EmployeePermission> EmployeePermissions { get; set; } = [];
+
+    public int? PositionId { get; set; }
+
+    public Position? Position { get; set; }
 }
