@@ -26,6 +26,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<HobbyService>();
 builder.Services.AddScoped<PositionService>();
 builder.Services.AddScoped<TokenService>();
 
