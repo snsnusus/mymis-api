@@ -23,6 +23,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Restore dependencies
+        run: dotnet restore MyMIS.Api/MyMIS.Api.csproj
+
       - name: Install EF Core CLI tool
         run: dotnet tool install --global dotnet-ef --version 10.0.11
 
