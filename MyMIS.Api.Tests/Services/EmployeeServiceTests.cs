@@ -1,7 +1,12 @@
+using Amazon.S3;
+using Amazon.S3.Model;
 using Microsoft.EntityFrameworkCore;
+using MSOPtions = Microsoft.Extensions.Options.Options;
+using Moq;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
+using MyMIS.Api.Options;
 using MyMIS.Api.Services;
 
 namespace MyMIS.Api.Tests.Services;
@@ -22,7 +27,20 @@ public class EmployeeServiceTests : IDisposable
 
     var hobbyService = new HobbyService(_context);
 
-    _service = new EmployeeService(_context, hobbyService);
+    var s3Options = MSOPtions.Create(new S3Options
+    {
+      AccessKey = "test-access-key",
+      SecretKey = "test-secret-key",
+      Region = "ap-southeast-1",
+      BucketName = "test-bucket"
+    });
+    var mockS3Client = new Mock<IAmazonS3>();
+    mockS3Client
+        .Setup(client => client.GetPreSignedURL(It.IsAny<GetPreSignedUrlRequest>()))
+        .Returns("https://fake-presigned-url.test/johndoe.jpg");
+    var s3UploadService = new S3UploadService(mockS3Client.Object, s3Options);
+
+    _service = new EmployeeService(_context, hobbyService, s3UploadService);
   }
 
   public void Dispose()
@@ -84,7 +102,7 @@ public class EmployeeServiceTests : IDisposable
     Assert.Equal("Doe", result[0].LastName);
     Assert.Equal("Sr.", result[0].Suffix);
     Assert.Equal("EMP-001", result[0].EmployeeCode);
-    Assert.Equal("johndoe.jpg", result[0].AvatarUrl);
+    Assert.Equal("https://fake-presigned-url.test/johndoe.jpg", result[0].AvatarUrl);
     Assert.Equal(department.Name, result[0].DepartmentName);
     Assert.Equal(position.Title, result[0].PositionTitle);
   }

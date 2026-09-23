@@ -18,6 +18,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install EF Core CLI tool
+        run: dotnet tool install --global dotnet-ef --version 10.0.11
+
+      - name: Build migrations bundle
+        run: dotnet ef migrations bundle --project MyMIS.Api --output ./efbundle --force
+
+      - name: Apply pending database migrations
+        run: ./efbundle --connection "${{ secrets.SUPABASE_CONNECTION_STRING }}"
+
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:

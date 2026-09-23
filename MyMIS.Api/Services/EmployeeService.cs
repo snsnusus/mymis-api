@@ -5,29 +5,47 @@ using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Services;
 
-public class EmployeeService(AppDbContext context, HobbyService hobbyService)
+public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3UploadService s3UploadService)
 {
   private readonly AppDbContext _context = context;
   private readonly HobbyService _hobbyService = hobbyService;
+  private readonly S3UploadService _s3UploadService = s3UploadService;
+
   public async Task<List<EmployeeSummaryResponseDto>> GetAllAsync()
   {
-    return await _context.Employees
-        .Include(e => e.Department)
-        .Select(e => new EmployeeSummaryResponseDto
-        {
-          Id = e.Id,
-          FirstName = e.FirstName,
-          MiddleName = e.MiddleName,
-          LastName = e.LastName,
-          Suffix = e.Suffix,
-          EmployeeCode = e.EmployeeCode,
-          DepartmentName = e.Department != null ? e.Department.Name : null,
-          AvatarUrl = e.AvatarUrl,
-          PositionTitle = e.Position != null ? e.Position.Title : null
+    var employees = await _context.Employees
+      .Include(e => e.Department)
+      .Select(e => new EmployeeSummaryResponseDto
+      {
+        Id = e.Id,
+        FirstName = e.FirstName,
+        MiddleName = e.MiddleName,
+        LastName = e.LastName,
+        Suffix = e.Suffix,
+        EmployeeCode = e.EmployeeCode,
+        DepartmentName = e.Department != null ? e.Department.Name : null,
+        AvatarUrl = e.AvatarUrl,
+        PositionTitle = e.Position != null ? e.Position.Title : null
 
-        })
-        .ToListAsync();
+      })
+      .ToListAsync();
+
+    foreach (var dto in employees)
+    {
+      if (!string.IsNullOrEmpty(dto.AvatarUrl))
+      {
+        dto.AvatarUrl = _s3UploadService.GetPresignedUrl(dto.AvatarUrl);
+      }
+
+      if (!string.IsNullOrEmpty(dto.AvatarThumbnailUrl))
+      {
+        dto.AvatarThumbnailUrl = _s3UploadService.GetPresignedUrl(dto.AvatarThumbnailUrl);
+      }
+    }
+
+    return employees;
   }
+
   public async Task<EmployeeResponseDto?> GetByIdAsync(int id)
   {
     var employee = await _context.Employees
@@ -40,7 +58,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService)
 
     if (employee is null) return null;
 
-    return new EmployeeResponseDto
+    var responseDto = new EmployeeResponseDto
     {
       Id = employee.Id,
       FirstName = employee.FirstName,
@@ -77,7 +95,20 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService)
       },
       Hobbies = [.. employee.EmployeeHobbies.Select(eh => new HobbyResponseDto { Id = eh.Hobby.Id, Name = eh.Hobby.Name })]
     };
+
+    if (!string.IsNullOrEmpty(responseDto.AvatarUrl))
+    {
+      responseDto.AvatarUrl = _s3UploadService.GetPresignedUrl(responseDto.AvatarUrl);
+    }
+
+    if (!string.IsNullOrEmpty(responseDto.AvatarThumbnailUrl))
+    {
+      responseDto.AvatarThumbnailUrl = _s3UploadService.GetPresignedUrl(responseDto.AvatarThumbnailUrl);
+    }
+
+    return responseDto;
   }
+
   public async Task<EmployeeResponseDto> CreateAsync(EmployeeCreateDto dto)
   {
     var employee = new Employee
@@ -232,6 +263,33 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService)
     if (link is null) return false;
 
     _context.EmployeeHobbies.Remove(link);
+    await _context.SaveChangesAsync();
+    return true;
+  }
+
+  public async Task<string?> UpdateAvatarAsync(int employeeId, IFormFile file)
+  {
+    var employee = await _context.Employees.FindAsync(employeeId);
+
+    if (employee is null) return null;
+
+    // Upload to S3 FIRST — only touch the DB if this succeeds.
+    var key = await _s3UploadService.UploadAvatarAsync(employeeId, file);
+
+    employee.AvatarUrl = key;
+    await _context.SaveChangesAsync();
+
+    // Hand back a presigned URL immediately, so the frontend can render
+    // the new photo right away without a separate re-fetch of the employee.
+    return _s3UploadService.GetPresignedUrl(key);
+  }
+
+  public async Task<bool> UpdateAvatarThumbnailAsync(int employeeId, string thumbnailKey)
+  {
+    var employee = await _context.Employees.FindAsync(employeeId);
+    if (employee is null) return false;
+
+    employee.AvatarThumbnailUrl = thumbnailKey;
     await _context.SaveChangesAsync();
     return true;
   }
