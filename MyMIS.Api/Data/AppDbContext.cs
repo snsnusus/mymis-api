@@ -5,99 +5,122 @@ namespace MyMIS.Api.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<Employee> Employees => Set<Employee>();
-    public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
-    public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
-    public DbSet<Department> Departments => Set<Department>();
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-    public DbSet<Hobby> Hobbies => Set<Hobby>();
-    public DbSet<Permission> Permissions { get; set; }
-    public DbSet<EmployeePermission> EmployeePermissions { get; set; }
-    public DbSet<Position> Positions => Set<Position>();
+  public DbSet<Employee> Employees => Set<Employee>();
+  public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
+  public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
+  public DbSet<Department> Departments => Set<Department>();
+  public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+  public DbSet<Hobby> Hobbies => Set<Hobby>();
+  public DbSet<Permission> Permissions { get; set; }
+  public DbSet<EmployeePermission> EmployeePermissions { get; set; }
+  public DbSet<Position> Positions => Set<Position>();
+  public DbSet<Region> Regions => Set<Region>();
+  public DbSet<City> Cities => Set<City>();
+  public DbSet<Barangay> Barangays => Set<Barangay>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
+  protected override void OnModelCreating(ModelBuilder modelBuilder)
+  {
+    base.OnModelCreating(modelBuilder);
 
-        // Resolve the two-FK-to-Employee ambiguity on Department
-        modelBuilder.Entity<Department>()
-            .HasOne(d => d.PrimaryContact)
-            .WithMany()
-            .HasForeignKey(d => d.PrimaryContactId)
-            .OnDelete(DeleteBehavior.Restrict);
+    // Resolve the two-FK-to-Employee ambiguity on Department
+    modelBuilder.Entity<Department>()
+      .HasOne(d => d.PrimaryContact)
+      .WithMany()
+      .HasForeignKey(d => d.PrimaryContactId)
+      .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Department>()
-            .HasOne(d => d.SecondaryContact)
-            .WithMany()
-            .HasForeignKey(d => d.SecondaryContactId)
-            .OnDelete(DeleteBehavior.Restrict);
+    modelBuilder.Entity<Department>()
+      .HasOne(d => d.SecondaryContact)
+      .WithMany()
+      .HasForeignKey(d => d.SecondaryContactId)
+      .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Employee>()
-            .HasQueryFilter(e => e.DeletedAt == null);
+    modelBuilder.Entity<Employee>()
+      .HasQueryFilter(e => e.DeletedAt == null);
 
-        modelBuilder.Entity<Employee>()
-            .Property(e => e.Role)
-            .HasConversion<string>()
-            .HasDefaultValue(Role.User);
+    modelBuilder.Entity<Employee>()
+      .Property(e => e.Role)
+      .HasConversion<string>()
+      .HasDefaultValue(Role.User);
 
-        modelBuilder.Entity<RefreshToken>()
-            .HasIndex(r => r.TokenHash)
-            .IsUnique();
+    modelBuilder.Entity<RefreshToken>()
+      .HasIndex(r => r.TokenHash)
+      .IsUnique();
 
-        // 1:1 — Employee <-> EmployeePersonalDetail
-        modelBuilder.Entity<Employee>()
-            .HasOne(e => e.PersonalDetail)
-            .WithOne(pd => pd.Employee)
-            .HasForeignKey<EmployeePersonalDetail>(pd => pd.EmployeeId);
+    // 1:1 — Employee <-> EmployeePersonalDetail
+    modelBuilder.Entity<Employee>()
+      .HasOne(e => e.PersonalDetail)
+      .WithOne(pd => pd.Employee)
+      .HasForeignKey<EmployeePersonalDetail>(pd => pd.EmployeeId);
 
-        // Many-to-many — Employee <-> Hobby, via the explicit EmployeeHobby join entity
-        modelBuilder.Entity<EmployeeHobby>()
-            .HasKey(eh => new { eh.EmployeeId, eh.HobbyId }); // composite PK — the pair together is the identity
+    // Many-to-many — Employee <-> Hobby, via the explicit EmployeeHobby join entity
+    modelBuilder.Entity<EmployeeHobby>()
+      .HasKey(eh => new { eh.EmployeeId, eh.HobbyId }); // composite PK — the pair together is the identity
 
-        modelBuilder.Entity<EmployeeHobby>()
-            .HasOne(eh => eh.Employee)
-            .WithMany(e => e.EmployeeHobbies)
-            .HasForeignKey(eh => eh.EmployeeId);
+    modelBuilder.Entity<EmployeeHobby>()
+      .HasOne(eh => eh.Employee)
+      .WithMany(e => e.EmployeeHobbies)
+      .HasForeignKey(eh => eh.EmployeeId);
 
-        modelBuilder.Entity<EmployeeHobby>()
-            .HasOne(eh => eh.Hobby)
-            .WithMany(h => h.EmployeeHobbies)
-            .HasForeignKey(eh => eh.HobbyId);
+    modelBuilder.Entity<EmployeeHobby>()
+      .HasOne(eh => eh.Hobby)
+      .WithMany(h => h.EmployeeHobbies)
+      .HasForeignKey(eh => eh.HobbyId);
 
-        modelBuilder.Entity<EmployeePermission>()
-            .HasKey(ep => new { ep.EmployeeId, ep.PermissionId });
+    modelBuilder.Entity<EmployeePermission>()
+      .HasKey(ep => new { ep.EmployeeId, ep.PermissionId });
 
-        modelBuilder.Entity<EmployeePermission>()
-            .HasOne(ep => ep.Employee)
-            .WithMany(e => e.EmployeePermissions)
-            .HasForeignKey(ep => ep.EmployeeId);
+    modelBuilder.Entity<EmployeePermission>()
+      .HasOne(ep => ep.Employee)
+      .WithMany(e => e.EmployeePermissions)
+      .HasForeignKey(ep => ep.EmployeeId);
 
-        modelBuilder.Entity<EmployeePermission>()
-            .HasOne(ep => ep.Permission)
-            .WithMany()
-            .HasForeignKey(ep => ep.PermissionId);
+    modelBuilder.Entity<EmployeePermission>()
+      .HasOne(ep => ep.Permission)
+      .WithMany()
+      .HasForeignKey(ep => ep.PermissionId);
 
-        modelBuilder.Entity<Permission>()
-            .HasIndex(p => p.Name)
-            .IsUnique();
+    modelBuilder.Entity<Permission>()
+      .HasIndex(p => p.Name)
+      .IsUnique();
 
-        modelBuilder.Entity<Position>()
-            .HasOne(p => p.Department)
-            .WithMany()
-            .HasForeignKey(p => p.DepartmentId)
-            .OnDelete(DeleteBehavior.Restrict);
+    modelBuilder.Entity<Position>()
+      .HasOne(p => p.Department)
+      .WithMany()
+      .HasForeignKey(p => p.DepartmentId)
+      .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Position>()
-            .HasIndex(p => new { p.DepartmentId, p.Slug }).IsUnique();
+    modelBuilder.Entity<Position>()
+      .HasIndex(p => new { p.DepartmentId, p.Slug }).IsUnique();
 
-        modelBuilder.Entity<Hobby>()
-            .HasIndex(h => h.NormalizedName)
-            .IsUnique();
+    modelBuilder.Entity<Hobby>()
+      .HasIndex(h => h.NormalizedName)
+      .IsUnique();
 
-        modelBuilder.Entity<Employee>()
-            .HasOne(e => e.Position)
-            .WithMany()
-            .HasForeignKey(e => e.PositionId)
-            .OnDelete(DeleteBehavior.SetNull);
-    }
+    modelBuilder.Entity<Employee>()
+      .HasOne(e => e.Position)
+      .WithMany()
+      .HasForeignKey(e => e.PositionId)
+      .OnDelete(DeleteBehavior.SetNull);
+
+    modelBuilder.Entity<City>()
+      .HasOne(c => c.Region)
+      .WithMany()
+      .HasForeignKey(c => c.RegionId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+    modelBuilder.Entity<City>()
+      .HasIndex(c => new { c.RegionId, c.Name })
+      .IsUnique();
+
+    modelBuilder.Entity<Barangay>()
+      .HasOne(b => b.City)
+      .WithMany()
+      .HasForeignKey(b => b.CityId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+    modelBuilder.Entity<Barangay>()
+      .HasIndex(b => new { b.CityId, b.Name })
+      .IsUnique();
+  }
 }
