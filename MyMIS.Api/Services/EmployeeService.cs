@@ -25,6 +25,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
         EmployeeCode = e.EmployeeCode,
         DepartmentName = e.Department != null ? e.Department.Name : null,
         AvatarUrl = e.AvatarUrl,
+        AvatarThumbnailUrl = e.AvatarThumbnailUrl,
         PositionTitle = e.Position != null ? e.Position.Title : null
 
       })
@@ -66,6 +67,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       LastName = employee.LastName,
       Suffix = employee.Suffix,
       AvatarUrl = employee.AvatarUrl,
+      AvatarThumbnailUrl = employee.AvatarThumbnailUrl,
       Gender = employee.Gender,
       Birthdate = employee.Birthdate,
       MaritalStatus = employee.MaritalStatus,
