@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
+using System.Text.Json;
 
 namespace MyMIS.Api.Services;
 
@@ -68,5 +70,61 @@ public class RegionService(AppDbContext context)
     _context.Regions.Remove(region);
     await _context.SaveChangesAsync();
     return true;
+  }
+
+  public async Task<BulkInsertResultDto> BulkCreateAsync(IReadOnlyList<JsonElement> rows)
+  {
+    // One query: every existing region name. There are only 17 regions,
+    // so loading them all is cheap.
+    var takenNames = (await _context.Regions
+            .Select(r => r.Name)
+            .ToListAsync())
+        .ToHashSet();
+
+    var errors = new List<BulkRowErrorDto>();
+    var toInsert = new List<Region>();
+
+    for (var i = 0; i < rows.Count; i++)
+    {
+      var rowNumber = i + 1;
+
+      if (!BulkRowParser.TryParse<RegionBulkItemDto>(rows[i], rowNumber, out var dto, out var error))
+      {
+        errors.Add(error);
+        continue;
+      }
+
+      var name = dto.Name!.Trim(); // safe: [Required] already passed
+
+      if (!takenNames.Add(name))
+      {
+        errors.Add(new BulkRowErrorDto
+        {
+          Row = rowNumber,
+          Data = rows[i],
+          Errors = [$"A region named '{name}' already exists."],
+        });
+        continue;
+      }
+
+      toInsert.Add(new Region
+      {
+        Name = name,
+        PsgcCode = string.IsNullOrWhiteSpace(dto.PsgcCode) ? null : dto.PsgcCode.Trim(),
+      });
+    }
+
+    if (toInsert.Count > 0)
+    {
+      _context.Regions.AddRange(toInsert);
+      await _context.SaveChangesAsync();
+    }
+
+    return new BulkInsertResultDto
+    {
+      Total = rows.Count,
+      Inserted = toInsert.Count,
+      Errors = errors,
+    };
   }
 }

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
+using System.Text.Json;
 
 namespace MyMIS.Api.Controllers;
 
@@ -51,5 +53,18 @@ public class RegionsController(RegionService regionService) : ControllerBase
     var deleted = await _regionService.DeleteAsync(id);
     if (!deleted) return NotFound();
     return NoContent();
+  }
+
+  [Authorize(Policy = "locations.manage")]
+  [HttpPost("bulk")]
+  public async Task<ActionResult<BulkInsertResultDto>> BulkCreate([FromBody] List<JsonElement> rows)
+  {
+    if (BulkRowParser.GetRowCountError(rows.Count) is { } countError)
+    {
+      return BadRequest(countError);
+    }
+
+    var result = await _regionService.BulkCreateAsync(rows);
+    return Ok(result);
   }
 }
