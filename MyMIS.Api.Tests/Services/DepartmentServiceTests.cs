@@ -101,8 +101,12 @@ public class DepartmentServiceTests : IDisposable
     var created = await _service.CreateAsync(departmentDto);
 
     // Assert
-    Assert.Equal($"{employee1.FirstName} {employee1.LastName}", created.PrimaryContactName);
-    Assert.Equal($"{employee2.FirstName} {employee2.LastName}", created.SecondaryContactName);
+    Assert.NotNull(created.PrimaryContact);
+    Assert.Equal(employee1.Id, created.PrimaryContact.Id);
+    Assert.Equal($"{employee1.FirstName} {employee1.LastName}", created.PrimaryContact.FullName);
+    Assert.NotNull(created.SecondaryContact);
+    Assert.Equal(employee2.Id, created.SecondaryContact.Id);
+    Assert.Equal($"{employee2.FirstName} {employee2.LastName}", created.SecondaryContact.FullName);
   }
 
   [Fact]
