@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
+using MyMIS.Api.Helpers;
+using System.Text.Json;
 
 namespace MyMIS.Api.Services;
 
@@ -84,5 +86,70 @@ public class CityService(AppDbContext context)
     _context.Cities.Remove(city);
     await _context.SaveChangesAsync();
     return true;
+  }
+
+  public async Task<BulkInsertResultDto?> BulkCreateAsync(int regionId, IReadOnlyList<JsonElement> rows)
+  {
+    // Request-level check, once, before touching any row.
+    var region = await _context.Regions.FindAsync(regionId);
+    if (region is null)
+    {
+      return null;
+    }
+
+    // One query: every city name already used in this region.
+    var takenNames = (await _context.Cities
+            .Where(c => c.RegionId == regionId)
+            .Select(c => c.Name)
+            .ToListAsync())
+        .ToHashSet();
+
+    var errors = new List<BulkRowErrorDto>();
+    var toInsert = new List<City>();
+
+    // A single pass: parse, validate, check duplicates, build.
+    for (var i = 0; i < rows.Count; i++)
+    {
+      var rowNumber = i + 1;
+
+      if (!BulkRowParser.TryParse<CityBulkItemDto>(rows[i], rowNumber, out var dto, out var error))
+      {
+        errors.Add(error);
+        continue;
+      }
+
+      var name = dto.Name!.Trim(); // safe: [Required] already passed
+
+      if (!takenNames.Add(name))
+      {
+        errors.Add(new BulkRowErrorDto
+        {
+          Row = rowNumber,
+          Data = rows[i],
+          Errors = [$"A city named '{name}' already exists in {region.Name}."],
+        });
+        continue;
+      }
+
+      toInsert.Add(new City
+      {
+        Name = name,
+        PsgcCode = string.IsNullOrWhiteSpace(dto.PsgcCode) ? null : dto.PsgcCode.Trim(),
+        RegionId = regionId, // assigned here, from the request, not from the row
+      });
+    }
+
+    if (toInsert.Count > 0)
+    {
+      _context.Cities.AddRange(toInsert);
+      await _context.SaveChangesAsync();
+    }
+
+    return new BulkInsertResultDto
+    {
+      Total = rows.Count,
+      Inserted = toInsert.Count,
+      Errors = errors,
+    };
   }
 }
