@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
+using System.Text.Json;
 
 namespace MyMIS.Api.Controllers;
 
@@ -51,5 +53,31 @@ public class BarangaysController(BarangayService barangayService) : ControllerBa
     var deleted = await _barangayService.DeleteAsync(id);
     if (!deleted) return NotFound();
     return NoContent();
+  }
+
+  [HttpPost("bulk")]
+  [Authorize(Policy = "locations.manage")]
+  public async Task<ActionResult<BulkInsertResultDto>> BulkCreate(
+    [FromQuery] int? cityId,
+    [FromBody] List<JsonElement> rows)
+  {
+    if (cityId is null)
+    {
+      return BadRequest("The cityId query parameter is required.");
+    }
+
+    if (BulkRowParser.GetRowCountError(rows.Count) is { } countError)
+    {
+      return BadRequest(countError);
+    }
+
+    var result = await _barangayService.BulkCreateAsync(cityId.Value, rows);
+
+    if (result is null)
+    {
+      return NotFound($"City with id {cityId} was not found.");
+    }
+
+    return Ok(result);
   }
 }

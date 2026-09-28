@@ -1,13 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
+using System.Text.Json;
 
 namespace MyMIS.Api.Services;
 
 public class BarangayService(AppDbContext context)
 {
   private readonly AppDbContext _context = context;
+
+  // Trims a value and turns empty or whitespace-only strings into null.
+  private static string? NullIfBlank(string? value) =>
+      string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
   public async Task<List<BarangayResponseDto>> GetAllAsync(int? cityId)
   {
@@ -88,5 +94,70 @@ public class BarangayService(AppDbContext context)
     _context.Barangays.Remove(barangay);
     await _context.SaveChangesAsync();
     return true;
+  }
+
+  public async Task<BulkInsertResultDto?> BulkCreateAsync(int cityId, IReadOnlyList<JsonElement> rows)
+  {
+    // Request-level check, once, before touching any row.
+    var city = await _context.Cities.FindAsync(cityId);
+    if (city is null)
+    {
+      return null;
+    }
+
+    // One query: every barangay name already used in this city.
+    var takenNames = (await _context.Barangays
+            .Where(b => b.CityId == cityId)
+            .Select(b => b.Name)
+            .ToListAsync())
+        .ToHashSet();
+
+    var errors = new List<BulkRowErrorDto>();
+    var toInsert = new List<Barangay>();
+
+    for (var i = 0; i < rows.Count; i++)
+    {
+      var rowNumber = i + 1;
+
+      if (!BulkRowParser.TryParse<BarangayBulkItemDto>(rows[i], rowNumber, out var dto, out var error))
+      {
+        errors.Add(error);
+        continue;
+      }
+
+      var name = dto.Name!.Trim(); // safe: [Required] already passed
+
+      if (!takenNames.Add(name))
+      {
+        errors.Add(new BulkRowErrorDto
+        {
+          Row = rowNumber,
+          Data = rows[i],
+          Errors = [$"A barangay named '{name}' already exists in {city.Name}."],
+        });
+        continue;
+      }
+
+      toInsert.Add(new Barangay
+      {
+        Name = name,
+        PsgcCode = NullIfBlank(dto.PsgcCode),
+        ZipCode = NullIfBlank(dto.ZipCode),
+        CityId = cityId, // assigned here, from the request, not from the row
+      });
+    }
+
+    if (toInsert.Count > 0)
+    {
+      _context.Barangays.AddRange(toInsert);
+      await _context.SaveChangesAsync();
+    }
+
+    return new BulkInsertResultDto
+    {
+      Total = rows.Count,
+      Inserted = toInsert.Count,
+      Errors = errors,
+    };
   }
 }
