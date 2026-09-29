@@ -35,6 +35,7 @@ builder.Services.AddScoped<CityService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<HobbyService>();
+builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<PositionService>();
 builder.Services.AddScoped<RegionService>();
 builder.Services.AddScoped<S3UploadService>();
@@ -84,14 +85,16 @@ builder.Services.AddAuthorizationBuilder()
     policy.Requirements.Add(new PermissionRequirement("employees.create")))
   .AddPolicy("employees.update", policy =>
     policy.Requirements.Add(new PermissionRequirement("employees.update")))
+  .AddPolicy("locations.manage", policy =>
+    policy.Requirements.Add(new PermissionRequirement("locations.manage")))
+  .AddPolicy("offices.manage", policy =>
+    policy.Requirements.Add(new PermissionRequirement("offices.manage")))
   .AddPolicy("positions.create", policy =>
     policy.Requirements.Add(new PermissionRequirement("positions.create")))
   .AddPolicy("positions.update", policy =>
     policy.Requirements.Add(new PermissionRequirement("positions.update")))
   .AddPolicy("SameDepartment", policy =>
-    policy.Requirements.Add(new SameDepartmentRequirement()))
-  .AddPolicy("locations.manage", policy =>
-    policy.Requirements.Add(new PermissionRequirement("locations.manage")));
+    policy.Requirements.Add(new SameDepartmentRequirement()));
 
 builder.Services.AddCors(options =>
 {
