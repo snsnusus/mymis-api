@@ -5,18 +5,19 @@ namespace MyMIS.Api.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+  public DbSet<Barangay> Barangays => Set<Barangay>();
+  public DbSet<City> Cities => Set<City>();
+  public DbSet<Department> Departments => Set<Department>();
   public DbSet<Employee> Employees => Set<Employee>();
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
-  public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
-  public DbSet<Department> Departments => Set<Department>();
-  public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-  public DbSet<Hobby> Hobbies => Set<Hobby>();
-  public DbSet<Permission> Permissions { get; set; }
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
+  public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
+  public DbSet<Hobby> Hobbies => Set<Hobby>();
+  public DbSet<Office> Offices => Set<Office>();
+  public DbSet<Permission> Permissions { get; set; }
   public DbSet<Position> Positions => Set<Position>();
+  public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
   public DbSet<Region> Regions => Set<Region>();
-  public DbSet<City> Cities => Set<City>();
-  public DbSet<Barangay> Barangays => Set<Barangay>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
@@ -121,6 +122,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     modelBuilder.Entity<Barangay>()
       .HasIndex(b => new { b.CityId, b.Name })
+      .IsUnique();
+
+    modelBuilder.Entity<Office>()
+      .HasIndex(o => o.Name)
       .IsUnique();
   }
 }
