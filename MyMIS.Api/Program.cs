@@ -35,6 +35,7 @@ builder.Services.AddScoped<CityService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmergencyContactService>();
 builder.Services.AddScoped<EmployeeService>();
+builder.Services.AddScoped<HmoProviderService>();
 builder.Services.AddScoped<HobbyService>();
 builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<PositionService>();
@@ -82,10 +83,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorizationBuilder()
   .AddPolicy("DepartmentScope", policy =>
     policy.Requirements.Add(new DepartmentScopeRequirement()))
+  .AddPolicy("SameDepartment", policy =>
+    policy.Requirements.Add(new SameDepartmentRequirement()))
   .AddPolicy("employees.create", policy =>
     policy.Requirements.Add(new PermissionRequirement("employees.create")))
   .AddPolicy("employees.update", policy =>
     policy.Requirements.Add(new PermissionRequirement("employees.update")))
+  .AddPolicy("hmo.manage", policy =>
+    policy.Requirements.Add(new PermissionRequirement("hmo.manage")))
   .AddPolicy("locations.manage", policy =>
     policy.Requirements.Add(new PermissionRequirement("locations.manage")))
   .AddPolicy("offices.manage", policy =>
@@ -93,9 +98,7 @@ builder.Services.AddAuthorizationBuilder()
   .AddPolicy("positions.create", policy =>
     policy.Requirements.Add(new PermissionRequirement("positions.create")))
   .AddPolicy("positions.update", policy =>
-    policy.Requirements.Add(new PermissionRequirement("positions.update")))
-  .AddPolicy("SameDepartment", policy =>
-    policy.Requirements.Add(new SameDepartmentRequirement()));
+    policy.Requirements.Add(new PermissionRequirement("positions.update")));
 
 builder.Services.AddCors(options =>
 {
