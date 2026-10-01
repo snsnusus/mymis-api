@@ -93,6 +93,11 @@
           "System.Diagnostics.EventLog": "6.0.0"
         }
       },
+      "libphonenumber-csharp": {
+        "type": "Transitive",
+        "resolved": "9.0.40",
+        "contentHash": "ywU5vgr+Q7bX+MSU2oxXfYDQDsrUCDfpkSae8PEd1t2L6e+nNIQtmsk/FHV9IIoMGEuuoxOZNQetFJTvTPcyOA=="
+      },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Transitive",
         "resolved": "10.0.11",
@@ -371,7 +376,8 @@
           "Microsoft.AspNetCore.OpenApi": "[10.0.3, )",
           "Microsoft.OpenApi": "[2.9.0, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
-          "Scalar.AspNetCore": "[2.17.1, )"
+          "Scalar.AspNetCore": "[2.17.1, )",
+          "libphonenumber-csharp": "[9.0.40, )"
         }
       }
     }
