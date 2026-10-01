@@ -8,6 +8,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Barangay> Barangays => Set<Barangay>();
   public DbSet<City> Cities => Set<City>();
   public DbSet<Department> Departments => Set<Department>();
+  public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
   public DbSet<Employee> Employees => Set<Employee>();
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
@@ -127,5 +128,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<Office>()
       .HasIndex(o => o.Name)
       .IsUnique();
+
+    modelBuilder.Entity<EmergencyContact>(entity =>
+      {
+        entity.HasOne<Employee>()
+                .WithMany(e => e.EmergencyContacts)
+                .HasForeignKey(c => c.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+        entity.Property(c => c.Relationship)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+        entity.OwnsOne(c => c.Phone);
+        entity.Navigation(c => c.Phone).IsRequired();
+
+        entity.OwnsOne(c => c.Address, address =>
+          {
+            address.HasOne(a => a.Barangay)
+                    .WithMany()
+                    .HasForeignKey(a => a.BarangayId)
+                    .OnDelete(DeleteBehavior.Restrict);
+          });
+
+        entity.HasIndex(c => c.EmployeeId, "IX_EmergencyContacts_EmployeeId");
+
+        entity.HasIndex(c => c.EmployeeId, "IX_EmergencyContacts_EmployeeId_Primary")
+          .IsUnique()
+          .HasFilter("\"IsPrimary\" = true AND \"DeletedAt\" IS NULL");
+
+        // Every query on EmergencyContacts automatically excludes soft-deleted rows.
+        entity.HasQueryFilter(c => c.DeletedAt == null);
+      });
   }
 }

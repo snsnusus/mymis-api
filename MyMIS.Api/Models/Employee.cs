@@ -60,6 +60,8 @@ public class Employee
 
   public ICollection<EmployeePermission> EmployeePermissions { get; set; } = [];
 
+  public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];
+
   public int? PositionId { get; set; }
 
   public Position? Position { get; set; }
