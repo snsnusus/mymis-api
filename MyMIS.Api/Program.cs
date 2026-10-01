@@ -33,6 +33,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<BarangayService>();
 builder.Services.AddScoped<CityService>();
 builder.Services.AddScoped<DepartmentService>();
+builder.Services.AddScoped<EmergencyContactService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<HobbyService>();
 builder.Services.AddScoped<OfficeService>();
