@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
+  public DbSet<HmoProvider> HmoProviders => Set<HmoProvider>();
   public DbSet<Hobby> Hobbies => Set<Hobby>();
   public DbSet<Office> Offices => Set<Office>();
   public DbSet<Permission> Permissions { get; set; }
@@ -159,6 +160,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         // Every query on EmergencyContacts automatically excludes soft-deleted rows.
         entity.HasQueryFilter(c => c.DeletedAt == null);
+      });
+
+    modelBuilder.Entity<HmoProvider>(entity =>
+      {
+        entity.HasIndex(p => p.Code).IsUnique();
+        entity.HasIndex(p => p.Name).IsUnique();
       });
   }
 }
