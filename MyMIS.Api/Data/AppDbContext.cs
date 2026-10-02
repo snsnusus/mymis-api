@@ -13,6 +13,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
+  public DbSet<HmoPlanCoverage> HmoPlanCoverages => Set<HmoPlanCoverage>();
+  public DbSet<HmoPlan> HmoPlans => Set<HmoPlan>();
   public DbSet<HmoProvider> HmoProviders => Set<HmoProvider>();
   public DbSet<Hobby> Hobbies => Set<Hobby>();
   public DbSet<Office> Offices => Set<Office>();
@@ -25,7 +27,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   {
     base.OnModelCreating(modelBuilder);
 
-    // Resolve the two-FK-to-Employee ambiguity on Department
     modelBuilder.Entity<Department>()
       .HasOne(d => d.PrimaryContact)
       .WithMany()
@@ -50,15 +51,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasIndex(r => r.TokenHash)
       .IsUnique();
 
-    // 1:1 — Employee <-> EmployeePersonalDetail
     modelBuilder.Entity<Employee>()
       .HasOne(e => e.PersonalDetail)
       .WithOne(pd => pd.Employee)
       .HasForeignKey<EmployeePersonalDetail>(pd => pd.EmployeeId);
 
-    // Many-to-many — Employee <-> Hobby, via the explicit EmployeeHobby join entity
     modelBuilder.Entity<EmployeeHobby>()
-      .HasKey(eh => new { eh.EmployeeId, eh.HobbyId }); // composite PK — the pair together is the identity
+      .HasKey(eh => new { eh.EmployeeId, eh.HobbyId });
 
     modelBuilder.Entity<EmployeeHobby>()
       .HasOne(eh => eh.Employee)
@@ -158,7 +157,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
           .IsUnique()
           .HasFilter("\"IsPrimary\" = true AND \"DeletedAt\" IS NULL");
 
-        // Every query on EmergencyContacts automatically excludes soft-deleted rows.
         entity.HasQueryFilter(c => c.DeletedAt == null);
       });
 
@@ -166,6 +164,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       {
         entity.HasIndex(p => p.Code).IsUnique();
         entity.HasIndex(p => p.Name).IsUnique();
+      });
+
+    modelBuilder.Entity<HmoPlan>(entity =>
+      {
+        entity.HasOne(p => p.HmoProvider)
+          .WithMany()
+          .HasForeignKey(p => p.HmoProviderId)
+          .OnDelete(DeleteBehavior.Restrict);
+
+        entity.HasIndex(p => new { p.HmoProviderId, p.Name }).IsUnique();
+
+        entity.Property(p => p.Tier).HasConversion<string>().HasMaxLength(20);
+        entity.Property(p => p.RoomType).HasConversion<string>().HasMaxLength(20);
+        entity.Property(p => p.PremiumFrequency).HasConversion<string>().HasMaxLength(20);
+
+        entity.Property(p => p.MaximumBenefitLimit).HasPrecision(12, 2);
+        entity.Property(p => p.PremiumCost).HasPrecision(12, 2);
+        entity.Property(p => p.PecLimit).HasPrecision(12, 2);
+        entity.Property(p => p.DependentPremiumCost).HasPrecision(12, 2);
+        entity.Property(p => p.EmployerSubsidyPercentage).HasPrecision(5, 2);
+        entity.Property(p => p.DependentSubsidyPercentage).HasPrecision(5, 2);
+      });
+
+    modelBuilder.Entity<HmoPlanCoverage>(entity =>
+      {
+        entity.HasOne(c => c.HmoPlan)
+          .WithMany(p => p.Coverages)
+          .HasForeignKey(c => c.HmoPlanId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+        entity.Property(c => c.LimitAmount).HasPrecision(12, 2);
       });
   }
 }
