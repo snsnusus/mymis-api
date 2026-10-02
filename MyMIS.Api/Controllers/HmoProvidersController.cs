@@ -8,14 +8,9 @@ namespace MyMIS.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = "hmo.manage")]
-public class HmoProvidersController : ControllerBase
+public class HmoProvidersController(HmoProviderService service) : ControllerBase
 {
-  private readonly HmoProviderService _service;
-
-  public HmoProvidersController(HmoProviderService service)
-  {
-    _service = service;
-  }
+  private readonly HmoProviderService _service = service;
 
   [HttpGet]
   public async Task<ActionResult<List<HmoProviderResponseDto>>> GetAll()
