@@ -169,9 +169,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<HmoPlan>(entity =>
       {
         entity.HasOne(p => p.HmoProvider)
-          .WithMany()
-          .HasForeignKey(p => p.HmoProviderId)
-          .OnDelete(DeleteBehavior.Restrict);
+              .WithMany(provider => provider.Plans)
+              .HasForeignKey(p => p.HmoProviderId)
+              .OnDelete(DeleteBehavior.Restrict);
 
         entity.HasIndex(p => new { p.HmoProviderId, p.Name }).IsUnique();
 

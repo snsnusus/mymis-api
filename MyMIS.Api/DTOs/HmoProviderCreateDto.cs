@@ -2,43 +2,28 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MyMIS.Api.DTOs;
 
-public class HmoProviderCreateDto : IValidatableObject
+public class HmoProviderCreateDto : HmoProviderFieldsDto
 {
-  [Required, MaxLength(20)]
-  public string Code { get; set; } = string.Empty;
+  public List<HmoPlanFieldsDto> Plans { get; set; } = [];
 
-  [Required, MaxLength(150)]
-  public string Name { get; set; } = string.Empty;
-
-  [MaxLength(150)]
-  public string? AccountManagerName { get; set; }
-
-  [MaxLength(50)]
-  public string? Hotline { get; set; }
-
-  [MaxLength(254), EmailAddress]
-  public string? SupportEmail { get; set; }
-
-  [MaxLength(500), Url]
-  public string? WebsiteUrl { get; set; }
-
-  [Required]
-  public DateOnly? ContractStartDate { get; set; }
-
-  [Required]
-  public DateOnly? ContractEndDate { get; set; }
-
-  public bool IsActive { get; set; } = true;
-
-  public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+  public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
   {
-    if (ContractStartDate is not null &&
-        ContractEndDate is not null &&
-        ContractEndDate <= ContractStartDate)
+    foreach (var result in base.Validate(validationContext))
     {
-      yield return new ValidationResult(
-          "Contract end date must be after the start date.",
-          [nameof(ContractEndDate)]);
+      yield return result;
+    }
+
+    var plans = Plans ?? [];
+    var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    for (var index = 0; index < plans.Count; index++)
+    {
+      var name = plans[index].Name.Trim();
+      if (name.Length > 0 && !seenNames.Add(name))
+      {
+        yield return new ValidationResult(
+            "Another plan in this request already uses this name.",
+            [$"{nameof(Plans)}[{index}].{nameof(HmoPlanFieldsDto.Name)}"]);
+      }
     }
   }
 }

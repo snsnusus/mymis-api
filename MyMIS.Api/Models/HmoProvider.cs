@@ -25,12 +25,12 @@ public class HmoProvider
   public string? WebsiteUrl { get; set; }
 
   public DateOnly ContractStartDate { get; set; }
-
   public DateOnly ContractEndDate { get; set; }
 
   public bool IsActive { get; set; } = true;
 
   public DateTime CreatedAt { get; set; }
-
   public DateTime UpdatedAt { get; set; }
+
+  public List<HmoPlan> Plans { get; set; } = [];
 }

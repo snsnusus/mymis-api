@@ -49,7 +49,7 @@ public class HmoProvidersController(HmoProviderService service) : ControllerBase
   }
 
   [HttpPut("{id:int}")]
-  public async Task<ActionResult<HmoProviderResponseDto>> Update(int id, HmoProviderCreateDto dto)
+  public async Task<ActionResult<HmoProviderResponseDto>> Update(int id, HmoProviderUpdateDto dto)
   {
     if (await _service.GetByIdAsync(id) is null)
     {
