@@ -24,6 +24,19 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
   }
 
   [Authorize]
+  [HttpGet("lookup")]
+  public async Task<ActionResult<List<EmployeeLookupDto>>> GetLookup(
+  [FromQuery] string? search,
+  [FromQuery] int limit = 20)
+  {
+    // Never let the client ask for an unbounded result. 1 to 50 rows.
+    var safeLimit = Math.Clamp(limit, 1, 50);
+
+    var results = await _employeeService.GetLookupAsync(search, safeLimit);
+    return Ok(results);
+  }
+
+  [Authorize]
   [HttpGet("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> GetById(int id)
   {

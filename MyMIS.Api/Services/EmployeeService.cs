@@ -47,6 +47,57 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
     return employees;
   }
 
+  public async Task<List<EmployeeLookupDto>> GetLookupAsync(string? search, int limit)
+  {
+    // IQueryable: nothing has hit the database yet. We're building up
+    // a query, the same way you chain a Knex/Mongoose query builder in Node
+    // before awaiting it.
+    IQueryable<Employee> query = _context.Employees;
+
+    if (!string.IsNullOrWhiteSpace(search))
+    {
+      var term = search.Trim().ToLower();
+
+      // CA1862 suggests Contains(term, StringComparison.OrdinalIgnoreCase), but this
+      // lambda is translated to SQL, and EF Core/Npgsql can't translate the
+      // StringComparison overload (it throws at runtime against Postgres, while
+      // InMemory tests would still pass). ToLower() here becomes SQL lower().
+#pragma warning disable CA1862
+      query = query.Where(e =>
+          (e.FirstName + " " + e.LastName).ToLower().Contains(term) ||
+          e.EmployeeCode.ToLower().Contains(term));
+#pragma warning restore CA1862
+    }
+
+    var results = await query
+      .OrderBy(e => e.LastName)
+      .ThenBy(e => e.FirstName)
+      .ThenBy(e => e.Id)
+      .Take(limit)
+      .Select(e => new EmployeeLookupDto
+      {
+        Id = e.Id,
+        FirstName = e.FirstName,
+        LastName = e.LastName,
+        PositionTitle = e.Position != null ? e.Position.Title : null,
+        DepartmentId = e.DepartmentId,
+        AvatarUrl = e.AvatarThumbnailUrl ?? e.AvatarUrl,
+      })
+      .ToListAsync();
+
+    // Same pattern as GetAllAsync: presigning is a C# method call, so it
+    // can't be translated into SQL. It has to run after .ToListAsync().
+    foreach (var dto in results)
+    {
+      if (!string.IsNullOrEmpty(dto.AvatarUrl))
+      {
+        dto.AvatarUrl = _s3UploadService.GetPresignedUrl(dto.AvatarUrl);
+      }
+    }
+
+    return results;
+  }
+
   public async Task<EmployeeResponseDto?> GetByIdAsync(int id)
   {
     var employee = await _context.Employees

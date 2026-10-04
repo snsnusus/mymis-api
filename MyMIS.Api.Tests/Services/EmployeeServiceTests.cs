@@ -37,7 +37,7 @@ public class EmployeeServiceTests : IDisposable
     var mockS3Client = new Mock<IAmazonS3>();
     mockS3Client
         .Setup(client => client.GetPreSignedURL(It.IsAny<GetPreSignedUrlRequest>()))
-        .Returns("https://fake-presigned-url.test/johndoe.jpg");
+        .Returns((GetPreSignedUrlRequest request) => $"https://fake-presigned-url.test/{request.Key}");
     var s3UploadService = new S3UploadService(mockS3Client.Object, s3Options);
 
     _service = new EmployeeService(_context, hobbyService, s3UploadService);
@@ -48,6 +48,18 @@ public class EmployeeServiceTests : IDisposable
     _context.Dispose();
     GC.SuppressFinalize(this);
   }
+
+  // Lookup tests seed several employees at once; only name and code matter to them.
+  private static Employee NewEmployee(string firstName, string lastName, string employeeCode) => new()
+  {
+    FirstName = firstName,
+    LastName = lastName,
+    Gender = "MALE",
+    MaritalStatus = "SINGLE",
+    EmployeeCode = employeeCode,
+    Username = employeeCode.ToLowerInvariant(),
+    PasswordHash = "irrelevant-for-this-test",
+  };
 
   [Fact]
   public async Task GetAllAsync_EmployeeWithDepartmentAndPosition_PopulatesAllSummaryFields()
@@ -1149,6 +1161,156 @@ public class EmployeeServiceTests : IDisposable
     var hobbyStillExists = await _context.Hobbies.FindAsync(hobby.Id);
     Assert.NotNull(hobbyStillExists);
     Assert.Equal("Reading", hobbyStillExists.Name);
+  }
+
+  [Fact]
+  public async Task GetLookupAsync_NoSearch_ReturnsAllOrderedByLastNameThenFirstName()
+  {
+    // Arrange: inserted deliberately out of order
+    _context.Employees.AddRange(
+        NewEmployee("Maria", "Santos", "EMP-002"),
+        NewEmployee("Ben", "Cruz", "EMP-003"),
+        NewEmployee("Ana", "Cruz", "EMP-001"));
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync(null, 20);
+
+    // Assert
+    Assert.Equal(3, result.Count);
+    Assert.Equal(("Ana", "Cruz"), (result[0].FirstName, result[0].LastName));
+    Assert.Equal(("Ben", "Cruz"), (result[1].FirstName, result[1].LastName));
+    Assert.Equal(("Maria", "Santos"), (result[2].FirstName, result[2].LastName));
+  }
+
+  [Theory]
+  [InlineData("maria")]      // first name
+  [InlineData("SANTOS")]     // last name, different case
+  [InlineData("maria san")]  // across first + last name
+  [InlineData("emp-002")]    // employee code, different case
+  [InlineData("  Maria  ")]  // surrounding whitespace is trimmed
+  public async Task GetLookupAsync_SearchTerm_MatchesCaseInsensitivelyAcrossNameAndCode(string search)
+  {
+    // Arrange
+    var maria = NewEmployee("Maria", "Santos", "EMP-002");
+    _context.Employees.AddRange(
+        maria,
+        NewEmployee("Ana", "Cruz", "EMP-001"),
+        NewEmployee("Ben", "Reyes", "EMP-003"));
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync(search, 20);
+
+    // Assert
+    var match = Assert.Single(result);
+    Assert.Equal(maria.Id, match.Id);
+  }
+
+  [Fact]
+  public async Task GetLookupAsync_SearchWithNoMatch_ReturnsEmptyList()
+  {
+    // Arrange
+    _context.Employees.Add(NewEmployee("Maria", "Santos", "EMP-002"));
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync("zzz", 20);
+
+    // Assert
+    Assert.NotNull(result);
+    Assert.Empty(result);
+  }
+
+  [Fact]
+  public async Task GetLookupAsync_WhitespaceOnlySearch_IsTreatedAsNoFilter()
+  {
+    // Arrange
+    _context.Employees.AddRange(
+        NewEmployee("Maria", "Santos", "EMP-002"),
+        NewEmployee("Ana", "Cruz", "EMP-001"));
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync("   ", 20);
+
+    // Assert
+    Assert.Equal(2, result.Count);
+  }
+
+  [Fact]
+  public async Task GetLookupAsync_MoreEmployeesThanLimit_ReturnsFirstNAlphabetically()
+  {
+    // Arrange
+    _context.Employees.AddRange(
+        NewEmployee("Maria", "Santos", "EMP-002"),
+        NewEmployee("Ben", "Reyes", "EMP-003"),
+        NewEmployee("Ana", "Cruz", "EMP-001"));
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync(null, 2);
+
+    // Assert: Santos is cut, proving the sort happens before the limit
+    Assert.Equal(2, result.Count);
+    Assert.Equal("Cruz", result[0].LastName);
+    Assert.Equal("Reyes", result[1].LastName);
+  }
+
+  [Theory]
+  [InlineData("avatars/1.jpg", "avatars-thumbnails/1.jpg", "https://fake-presigned-url.test/avatars-thumbnails/1.jpg")]
+  [InlineData("avatars/1.jpg", null, "https://fake-presigned-url.test/avatars/1.jpg")]
+  [InlineData(null, null, null)]
+  public async Task GetLookupAsync_AvatarKeys_PrefersThumbnailThenOriginal(
+      string? avatarKey, string? thumbnailKey, string? expectedUrl)
+  {
+    // Arrange
+    var employee = NewEmployee("Maria", "Santos", "EMP-002");
+    employee.AvatarUrl = avatarKey;
+    employee.AvatarThumbnailUrl = thumbnailKey;
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync(null, 20);
+
+    // Assert
+    Assert.Equal(expectedUrl, Assert.Single(result).AvatarUrl);
+  }
+
+  [Fact]
+  public async Task GetLookupAsync_EmployeeWithPositionAndDepartment_PopulatesPositionTitleAndDepartmentId()
+  {
+    // Arrange
+    var department = new Department { Name = "Human Resources", Slug = "HRD", Status = "Active" };
+    _context.Departments.Add(department);
+    await _context.SaveChangesAsync();
+
+    var position = new Position
+    {
+      Title = "Manager",
+      Slug = "MNGR",
+      SortOrder = 1,
+      IsActive = true,
+      DepartmentId = department.Id,
+    };
+    _context.Positions.Add(position);
+    await _context.SaveChangesAsync();
+
+    var assigned = NewEmployee("Maria", "Santos", "EMP-002");
+    assigned.PositionId = position.Id;
+    assigned.DepartmentId = department.Id;
+    _context.Employees.AddRange(assigned, NewEmployee("Ana", "Cruz", "EMP-001"));
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetLookupAsync(null, 20);
+
+    // Assert
+    Assert.Null(result[0].PositionTitle);
+    Assert.Null(result[0].DepartmentId);
+    Assert.Equal("Manager", result[1].PositionTitle);
+    Assert.Equal(department.Id, result[1].DepartmentId);
   }
 }
 
