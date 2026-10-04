@@ -11,10 +11,22 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
   private readonly HobbyService _hobbyService = hobbyService;
   private readonly S3UploadService _s3UploadService = s3UploadService;
 
-  public async Task<List<EmployeeSummaryResponseDto>> GetAllAsync()
+  public async Task<PagedResult<EmployeeSummaryResponseDto>> GetPagedAsync(
+    string? search, int page, int pageSize)
   {
-    var employees = await _context.Employees
-      .Include(e => e.Department)
+    // Filter once, then count AND page that same filtered query.
+    var query = ApplySearch(_context.Employees, search);
+
+    // Query 1: rows matching the search, across all pages.
+    var totalCount = await query.CountAsync();
+
+    // Query 2: just the matching rows for this page.
+    var data = await query
+      .OrderBy(e => e.LastName)
+      .ThenBy(e => e.FirstName)
+      .ThenBy(e => e.Id)
+      .Skip((page - 1) * pageSize)
+      .Take(pageSize)
       .Select(e => new EmployeeSummaryResponseDto
       {
         Id = e.Id,
@@ -26,12 +38,12 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
         DepartmentName = e.Department != null ? e.Department.Name : null,
         AvatarUrl = e.AvatarUrl,
         AvatarThumbnailUrl = e.AvatarThumbnailUrl,
-        PositionTitle = e.Position != null ? e.Position.Title : null
-
+        PositionTitle = e.Position != null ? e.Position.Title : null,
       })
       .ToListAsync();
 
-    foreach (var dto in employees)
+    // Presigning now only runs for the rows on this page, not every employee.
+    foreach (var dto in data)
     {
       if (!string.IsNullOrEmpty(dto.AvatarUrl))
       {
@@ -44,32 +56,17 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       }
     }
 
-    return employees;
+    return new PagedResult<EmployeeSummaryResponseDto>
+    {
+      Data = data,
+      TotalCount = totalCount,
+      Page = page,
+      PageSize = pageSize,
+    };
   }
-
   public async Task<List<EmployeeLookupDto>> GetLookupAsync(string? search, int limit)
   {
-    // IQueryable: nothing has hit the database yet. We're building up
-    // a query, the same way you chain a Knex/Mongoose query builder in Node
-    // before awaiting it.
-    IQueryable<Employee> query = _context.Employees;
-
-    if (!string.IsNullOrWhiteSpace(search))
-    {
-      var term = search.Trim().ToLower();
-
-      // CA1862 suggests Contains(term, StringComparison.OrdinalIgnoreCase), but this
-      // lambda is translated to SQL, and EF Core/Npgsql can't translate the
-      // StringComparison overload (it throws at runtime against Postgres, while
-      // InMemory tests would still pass). ToLower() here becomes SQL lower().
-#pragma warning disable CA1862
-      query = query.Where(e =>
-          (e.FirstName + " " + e.LastName).ToLower().Contains(term) ||
-          e.EmployeeCode.ToLower().Contains(term));
-#pragma warning restore CA1862
-    }
-
-    var results = await query
+    var results = await ApplySearch(_context.Employees, search)
       .OrderBy(e => e.LastName)
       .ThenBy(e => e.FirstName)
       .ThenBy(e => e.Id)
@@ -85,8 +82,8 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       })
       .ToListAsync();
 
-    // Same pattern as GetAllAsync: presigning is a C# method call, so it
-    // can't be translated into SQL. It has to run after .ToListAsync().
+    // Presigning is a C# method call, so it can't be translated into SQL.
+    // It has to run after .ToListAsync().
     foreach (var dto in results)
     {
       if (!string.IsNullOrEmpty(dto.AvatarUrl))
@@ -345,5 +342,28 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
     employee.AvatarThumbnailUrl = thumbnailKey;
     await _context.SaveChangesAsync();
     return true;
+  }
+
+  // Shared search filter: matches full name or employee code, case-insensitive.
+  // Used by GetLookupAsync now, and by the paged list in step 3.3.
+  private static IQueryable<Employee> ApplySearch(IQueryable<Employee> query, string? search)
+  {
+    if (string.IsNullOrWhiteSpace(search))
+    {
+      return query;
+    }
+
+    // Runs in C# before the query is sent, so use the culture-independent version.
+    var term = search.Trim().ToLowerInvariant();
+
+    // CA1862 suggests Contains(term, StringComparison.OrdinalIgnoreCase), but this
+    // lambda is translated to SQL, and EF Core/Npgsql can't translate the
+    // StringComparison overload (it throws at runtime against Postgres, while
+    // InMemory tests would still pass). ToLower() here becomes SQL lower().
+#pragma warning disable CA1862
+    return query.Where(e =>
+        (e.FirstName + " " + e.LastName).ToLower().Contains(term) ||
+        e.EmployeeCode.ToLower().Contains(term));
+#pragma warning restore CA1862
   }
 }

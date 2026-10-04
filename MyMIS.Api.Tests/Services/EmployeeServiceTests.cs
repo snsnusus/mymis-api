@@ -61,8 +61,21 @@ public class EmployeeServiceTests : IDisposable
     PasswordHash = "irrelevant-for-this-test",
   };
 
+  // Five employees, inserted out of order.
+  // Sorted by last name: Bautista, Cruz, Garcia, Reyes, Santos.
+  private async Task SeedFiveEmployeesAsync()
+  {
+    _context.Employees.AddRange(
+        NewEmployee("Maria", "Santos", "EMP-005"),
+        NewEmployee("Ana", "Cruz", "EMP-002"),
+        NewEmployee("Dina", "Garcia", "EMP-003"),
+        NewEmployee("Carlo", "Bautista", "EMP-001"),
+        NewEmployee("Ben", "Reyes", "EMP-004"));
+    await _context.SaveChangesAsync();
+  }
+
   [Fact]
-  public async Task GetAllAsync_EmployeeWithDepartmentAndPosition_PopulatesAllSummaryFields()
+  public async Task GetPagedAsync_EmployeeWithDepartmentAndPosition_PopulatesAllSummaryFields()
   {
     // Arrange
     var department = new Department
@@ -105,22 +118,22 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetAllAsync();
+    var result = await _service.GetPagedAsync(null, 1, 20);
 
     // Assert
-    Assert.Single(result);
-    Assert.Equal("John", result[0].FirstName);
-    Assert.Equal("Conor", result[0].MiddleName);
-    Assert.Equal("Doe", result[0].LastName);
-    Assert.Equal("Sr.", result[0].Suffix);
-    Assert.Equal("EMP-001", result[0].EmployeeCode);
-    Assert.Equal("https://fake-presigned-url.test/johndoe.jpg", result[0].AvatarUrl);
-    Assert.Equal(department.Name, result[0].DepartmentName);
-    Assert.Equal(position.Title, result[0].PositionTitle);
+    var item = Assert.Single(result.Data);
+    Assert.Equal("John", item.FirstName);
+    Assert.Equal("Conor", item.MiddleName);
+    Assert.Equal("Doe", item.LastName);
+    Assert.Equal("Sr.", item.Suffix);
+    Assert.Equal("EMP-001", item.EmployeeCode);
+    Assert.Equal("https://fake-presigned-url.test/johndoe.jpg", item.AvatarUrl);
+    Assert.Equal(department.Name, item.DepartmentName);
+    Assert.Equal(position.Title, item.PositionTitle);
   }
 
   [Fact]
-  public async Task GetAllAsync_EmployeeWithNoDepartmentOrPosition_ReturnsNullNamesWithoutThrowing()
+  public async Task GetPagedAsync_EmployeeWithNoDepartmentOrPosition_ReturnsNullNamesWithoutThrowing()
   {
     // Arrange
     var employee = new Employee
@@ -137,12 +150,94 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetAllAsync();
+    var result = await _service.GetPagedAsync(null, 1, 20);
 
     // Assert
-    Assert.Single(result);
-    Assert.Null(result[0].DepartmentName);
-    Assert.Null(result[0].PositionTitle);
+    var item = Assert.Single(result.Data);
+    Assert.Null(item.DepartmentName);
+    Assert.Null(item.PositionTitle);
+  }
+
+  [Fact]
+  public async Task GetPagedAsync_SecondPage_ReturnsNextSliceInSortOrder()
+  {
+    // Arrange
+    await SeedFiveEmployeesAsync();
+
+    // Act: page 2, 2 per page
+    var result = await _service.GetPagedAsync(null, 2, 2);
+
+    // Assert: skips Bautista and Cruz, returns Garcia and Reyes
+    Assert.Equal(2, result.Data.Count);
+    Assert.Equal("Garcia", result.Data[0].LastName);
+    Assert.Equal("Reyes", result.Data[1].LastName);
+    Assert.Equal(5, result.TotalCount);
+    Assert.Equal(2, result.Page);
+    Assert.Equal(2, result.PageSize);
+  }
+
+  [Fact]
+  public async Task GetPagedAsync_LastPartialPage_ReturnsRemainingRows()
+  {
+    // Arrange
+    await SeedFiveEmployeesAsync();
+
+    // Act: 5 rows at 2 per page = 2 + 2 + 1, so page 3 has one row
+    var result = await _service.GetPagedAsync(null, 3, 2);
+
+    // Assert
+    var item = Assert.Single(result.Data);
+    Assert.Equal("Santos", item.LastName);
+    Assert.Equal(5, result.TotalCount);
+  }
+
+  [Fact]
+  public async Task GetPagedAsync_PagePastTheEnd_ReturnsEmptyItemsWithRealTotal()
+  {
+    // Arrange
+    await SeedFiveEmployeesAsync();
+
+    // Act
+    var result = await _service.GetPagedAsync(null, 10, 2);
+
+    // Assert: no rows on that page, but the total is still correct
+    Assert.Empty(result.Data);
+    Assert.Equal(5, result.TotalCount);
+  }
+
+  [Fact]
+  public async Task GetPagedAsync_SoftDeletedEmployee_ExcludedFromItemsAndTotalCount()
+  {
+    // Arrange
+    await SeedFiveEmployeesAsync();
+    var santos = await _context.Employees.FirstAsync(e => e.LastName == "Santos");
+    santos.DeletedAt = DateTime.UtcNow;
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetPagedAsync(null, 1, 20);
+
+    // Assert: the count and the page agree
+    Assert.Equal(4, result.TotalCount);
+    Assert.Equal(4, result.Data.Count);
+    Assert.DoesNotContain(result.Data, e => e.LastName == "Santos");
+  }
+
+  [Fact]
+  public async Task GetPagedAsync_SearchTerm_FiltersItemsAndTotalCount()
+  {
+    // Arrange: "ar" matches Maria Santos, Dina Garcia, Carlo Bautista
+    // (sorted: Bautista, Garcia, Santos), but not Ana Cruz or Ben Reyes.
+    await SeedFiveEmployeesAsync();
+
+    // Act: first page, 2 per page
+    var result = await _service.GetPagedAsync("ar", 1, 2);
+
+    // Assert: total counts only the 3 matches; the page holds the first 2
+    Assert.Equal(3, result.TotalCount);
+    Assert.Equal(2, result.Data.Count);
+    Assert.Equal("Bautista", result.Data[0].LastName);
+    Assert.Equal("Garcia", result.Data[1].LastName);
   }
 
   [Fact]

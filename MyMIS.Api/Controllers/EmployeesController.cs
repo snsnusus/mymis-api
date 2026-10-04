@@ -17,10 +17,18 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
 
   [Authorize]
   [HttpGet]
-  public async Task<ActionResult<List<EmployeeSummaryResponseDto>>> GetAll()
+  public async Task<ActionResult<PagedResult<EmployeeSummaryResponseDto>>> GetAll(
+  [FromQuery] string? search,
+  [FromQuery] int page = 1,
+  [FromQuery] int pageSize = 20)
   {
-    var employees = await _employeeService.GetAllAsync();
-    return Ok(employees);
+    var safePageSize = Math.Clamp(pageSize, 1, 100);
+
+    // The upper bound keeps (page - 1) * pageSize from overflowing int.
+    var safePage = Math.Clamp(page, 1, int.MaxValue / safePageSize);
+
+    var result = await _employeeService.GetPagedAsync(search, safePage, safePageSize);
+    return Ok(result);
   }
 
   [Authorize]
