@@ -47,6 +47,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasConversion<string>()
       .HasDefaultValue(Role.User);
 
+    modelBuilder.Entity<Employee>()
+      .Property(e => e.AvatarStyle)
+      .HasConversion<string>()
+      .HasMaxLength(20);
+
     modelBuilder.Entity<RefreshToken>()
       .HasIndex(r => r.TokenHash)
       .IsUnique();

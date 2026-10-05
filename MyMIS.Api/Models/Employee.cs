@@ -46,13 +46,15 @@ public class Employee
   [Required]
   public string PasswordHash { get; set; } = string.Empty;
 
-  public DateTime? DeletedAt { get; set; }
+
 
   public Role Role { get; set; } = Role.User;
 
-  public string? AvatarUrl { get; set; }
+  public AvatarStyle? AvatarStyle { get; set; }
 
   public string? AvatarThumbnailUrl { get; set; }
+
+  public string? AvatarUrl { get; set; }
 
   public EmployeePersonalDetail? PersonalDetail { get; set; }
 
@@ -65,4 +67,7 @@ public class Employee
   public int? PositionId { get; set; }
 
   public Position? Position { get; set; }
+
+  public DateTime? DeletedAt { get; set; }
+
 }
