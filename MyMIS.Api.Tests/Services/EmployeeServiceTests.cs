@@ -8,6 +8,7 @@ using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
+using MyMIS.Api.Dtos;
 
 namespace MyMIS.Api.Tests.Services;
 
@@ -251,7 +252,7 @@ public class EmployeeServiceTests : IDisposable
   public async Task GetByIdAsync_NonExistentId_ReturnsNull()
   {
     // Act
-    var result = await _service.GetByIdAsync(999);
+    var result = await _service.GetByIdAsync(999, includeEmergencyContacts: false);
 
     // Assert
     Assert.Null(result);
@@ -275,7 +276,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id);
+    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
 
     // Assert
     Assert.NotNull(result);
@@ -325,7 +326,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id);
+    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
 
     // Assert
     Assert.NotNull(result);
@@ -355,7 +356,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id);
+    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
 
     // Assert
     Assert.NotNull(result);
@@ -397,7 +398,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id);
+    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
 
     // Assert
     Assert.NotNull(result);
@@ -424,7 +425,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id);
+    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
 
     // Assert
     Assert.NotNull(result);
@@ -450,13 +451,107 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id);
+    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
 
     // Assert
     Assert.NotNull(result);
     Assert.Null(result.EmployeeType);
     Assert.Null(result.EmploymentStatus);
     Assert.Null(result.JoiningDate);
+  }
+
+
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task GetByIdAsync_EmployeeWithContact_IncludesContactsOnlyWhenAsked(bool include)
+  {
+    // Arrange
+    var created = await _service.CreateAsync(new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Married",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      EmergencyContact = NewContactDto(),
+    });
+
+    // Act
+    var result = await _service.GetByIdAsync(created.Id, includeEmergencyContacts: include);
+
+    // Assert
+    Assert.NotNull(result);
+    if (include)
+    {
+      var contact = Assert.Single(result.EmergencyContacts!);
+      Assert.Equal("Jose", contact.FirstName);
+    }
+    else
+    {
+      Assert.Null(result.EmergencyContacts);
+    }
+  }
+
+  [Fact]
+  public async Task CreateAsync_WithEmergencyContact_SavesItForTheNewEmployee()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Married",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      EmergencyContact = NewContactDto(),
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: in the database...
+    var contacts = await _context.EmergencyContacts
+      .AsNoTracking()
+      .Where(c => c.EmployeeId == result.Id)
+      .ToListAsync();
+
+    var contact = Assert.Single(contacts);
+    Assert.Equal("Jose", contact.FirstName);
+    Assert.Equal("+639171234567", contact.Phone.Number);
+    Assert.True(contact.IsPrimary);
+
+    // ...and in the response
+    var returned = Assert.Single(result.EmergencyContacts!);
+    Assert.Equal("Jose", returned.FirstName);
+    Assert.True(returned.IsPrimary);
+  }
+
+  [Fact]
+  public async Task CreateAsync_ContactNotMarkedPrimary_StillSavesItAsPrimary()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Married",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      EmergencyContact = NewContactDto(isPrimary: false),
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    var contact = await _context.EmergencyContacts
+      .AsNoTracking()
+      .SingleAsync(c => c.EmployeeId == result.Id);
+    Assert.True(contact.IsPrimary);
   }
 
   [Fact]
@@ -1431,7 +1526,7 @@ public class EmployeeServiceTests : IDisposable
     Assert.True(deleteResult);
 
     // Normal query respects the global filter — should NOT find it
-    var viaService = await _service.GetByIdAsync(created.Id);
+    var viaService = await _service.GetByIdAsync(created.Id, includeEmergencyContacts: false);
     Assert.Null(viaService);
 
     // Bypassing the filter proves the row still physically exists
@@ -1908,5 +2003,14 @@ public class EmployeeServiceTests : IDisposable
     // Assert
     Assert.False(available);
   }
+
+  private static EmergencyContactCreateDto NewContactDto(bool isPrimary = false) => new()
+  {
+    FirstName = "Jose",
+    LastName = "Reyes",
+    Relationship = EmergencyContactRelationship.Spouse,
+    Phone = new PhoneDto { CountryCode = "PH", Number = "+639171234567" },
+    IsPrimary = isPrimary,
+  };
 }
 
