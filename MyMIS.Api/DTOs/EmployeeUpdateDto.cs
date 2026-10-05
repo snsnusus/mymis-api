@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using MyMIS.Api.Models;
 using MyMIS.Api.Validation;
 
 namespace MyMIS.Api.DTOs;
@@ -22,22 +24,30 @@ public class EmployeeUpdateDto
 
   public DateOnly? Birthdate { get; set; }
 
-  [Required]
-  public string MaritalStatus { get; set; } = string.Empty;
-
-  [Required, MaxLength(50)]
-  public string EmployeeCode { get; set; } = string.Empty;
-
-  public string? OfficeLocation { get; set; }
-
-  public string? WorkSchedule { get; set; }
-
   [Required, ValidUsername]
   public string Username { get; set; } = string.Empty;
 
   // Optional on update — null/empty means "don't change the password"
   [MinLength(8)]
   public string? Password { get; set; }
+
+  [Required]
+  public string MaritalStatus { get; set; } = string.Empty;
+
+  [Required, MaxLength(50)]
+  public string EmployeeCode { get; set; } = string.Empty;
+
+  [Required]
+  [EnumDataType(typeof(EmploymentStatus))]
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public EmploymentStatus? EmploymentStatus { get; set; }
+
+  [Required]
+  public DateOnly? JoiningDate { get; set; }
+
+  public string? OfficeLocation { get; set; }
+
+  public string? WorkSchedule { get; set; }
 
   public EmployeePersonalDetailUpdateDto? PersonalDetail { get; set; }
 }

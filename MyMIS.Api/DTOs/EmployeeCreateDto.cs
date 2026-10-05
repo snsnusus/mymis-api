@@ -27,8 +27,25 @@ public class EmployeeCreateDto
   [Required]
   public string MaritalStatus { get; set; } = string.Empty;
 
+  [EnumDataType(typeof(AvatarStyle))]
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public AvatarStyle? AvatarStyle { get; set; }
+
   [Required, MaxLength(50)]
   public string EmployeeCode { get; set; } = string.Empty;
+
+  [Required]
+  [EnumDataType(typeof(EmployeeType))]
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public EmployeeType? EmployeeType { get; set; }
+
+  [Required]
+  [EnumDataType(typeof(EmploymentStatus))]
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public EmploymentStatus? EmploymentStatus { get; set; }
+
+  [Required]
+  public DateOnly? JoiningDate { get; set; }
 
   public string? OfficeLocation { get; set; }
 
@@ -44,11 +61,7 @@ public class EmployeeCreateDto
 
   public int? PositionId { get; set; }
 
-  [EnumDataType(typeof(AvatarStyle))]
-  [JsonConverter(typeof(JsonStringEnumConverter))]
-  public AvatarStyle? AvatarStyle { get; set; }
-
-  // NEW — optional. Null means HR skipped this section entirely;
+  // Optional. Null means HR skipped this section entirely;
   // CreateAsync still attaches a PersonalDetail row either way,
   // just with all-null fields in that case.
   public EmployeePersonalDetailCreateDto? PersonalDetail { get; set; }

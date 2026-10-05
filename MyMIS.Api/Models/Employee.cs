@@ -27,34 +27,41 @@ public class Employee
 
   public required string MaritalStatus { get; set; }
 
+  [Required]
+  public string Username { get; set; } = string.Empty;
+
+  [Required]
+  public string PasswordHash { get; set; } = string.Empty;
+
+  public string? AvatarUrl { get; set; }
+
+  public AvatarStyle? AvatarStyle { get; set; }
+
+  public string? AvatarThumbnailUrl { get; set; }
+
+  public Role Role { get; set; } = Role.User;
+
+  public required string EmployeeCode { get; set; } // was "employeeId" in your JSON
+
   // Foreign key — nullable, since your real data shows some employees
   // with no department assigned yet
   public int? DepartmentId { get; set; }
 
   public Department? Department { get; set; }
 
-  public required string EmployeeCode { get; set; } // was "employeeId" in your JSON
+  public int? PositionId { get; set; }
+
+  public Position? Position { get; set; }
+
+  public EmployeeType? EmployeeType { get; set; }
+
+  public EmploymentStatus? EmploymentStatus { get; set; }
+
+  public DateOnly? JoiningDate { get; set; }
 
   public string? OfficeLocation { get; set; }
 
   public string? WorkSchedule { get; set; }
-
-  [Required]
-  public string Username { get; set; } = string.Empty;
-
-  // Never store plain text — we'll wire this up to a real hash next
-  [Required]
-  public string PasswordHash { get; set; } = string.Empty;
-
-
-
-  public Role Role { get; set; } = Role.User;
-
-  public AvatarStyle? AvatarStyle { get; set; }
-
-  public string? AvatarThumbnailUrl { get; set; }
-
-  public string? AvatarUrl { get; set; }
 
   public EmployeePersonalDetail? PersonalDetail { get; set; }
 
@@ -64,10 +71,5 @@ public class Employee
 
   public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];
 
-  public int? PositionId { get; set; }
-
-  public Position? Position { get; set; }
-
   public DateTime? DeletedAt { get; set; }
-
 }

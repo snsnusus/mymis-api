@@ -71,6 +71,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasForeignKey(e => e.PositionId)
       .OnDelete(DeleteBehavior.SetNull);
 
+    modelBuilder.Entity<Employee>()
+      .Property(e => e.EmployeeType)
+      .HasConversion<string>()
+      .HasMaxLength(20);
+
+    modelBuilder.Entity<Employee>()
+      .Property(e => e.EmploymentStatus)
+      .HasConversion<string>()
+      .HasMaxLength(20);
+
     modelBuilder.Entity<RefreshToken>()
       .HasIndex(r => r.TokenHash)
       .IsUnique();
@@ -117,8 +127,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<Hobby>()
       .HasIndex(h => h.NormalizedName)
       .IsUnique();
-
-
 
     modelBuilder.Entity<City>()
       .HasOne(c => c.Region)

@@ -123,12 +123,15 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       Gender = employee.Gender,
       Birthdate = employee.Birthdate,
       MaritalStatus = employee.MaritalStatus,
-      OfficeLocation = employee.OfficeLocation,
-      WorkSchedule = employee.WorkSchedule,
-      EmployeeCode = employee.EmployeeCode,
       Username = employee.Username,
+      EmployeeCode = employee.EmployeeCode,
+      EmployeeType = employee.EmployeeType,
+      EmploymentStatus = employee.EmploymentStatus,
       DepartmentId = employee.DepartmentId,
       DepartmentName = employee.Department?.Name,
+      OfficeLocation = employee.OfficeLocation,
+      WorkSchedule = employee.WorkSchedule,
+      JoiningDate = employee.JoiningDate,
       PersonalDetail = employee.PersonalDetail is null ? null : new EmployeePersonalDetailDto
       {
         Nickname = employee.PersonalDetail.Nickname,
@@ -175,13 +178,16 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       Gender = dto.Gender,
       Birthdate = dto.Birthdate,
       MaritalStatus = dto.MaritalStatus,
-      EmployeeCode = dto.EmployeeCode,
-      OfficeLocation = dto.OfficeLocation,
-      WorkSchedule = dto.WorkSchedule,
       Username = UsernameRules.Normalize(dto.Username),
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+      EmployeeCode = dto.EmployeeCode,
+      EmployeeType = dto.EmployeeType,
+      EmploymentStatus = dto.EmploymentStatus,
       DepartmentId = dto.DepartmentId,
       PositionId = dto.PositionId,
+      OfficeLocation = dto.OfficeLocation,
+      WorkSchedule = dto.WorkSchedule,
+      JoiningDate = dto.JoiningDate,
       PersonalDetail = new EmployeePersonalDetail
       {
         Nickname = dto.PersonalDetail?.Nickname,
@@ -214,10 +220,12 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
     employee.Gender = dto.Gender;
     employee.Birthdate = dto.Birthdate;
     employee.MaritalStatus = dto.MaritalStatus;
+    employee.Username = UsernameRules.Normalize(dto.Username);
     employee.EmployeeCode = dto.EmployeeCode;
+    employee.EmploymentStatus = dto.EmploymentStatus;
+    employee.JoiningDate = dto.JoiningDate;
     employee.OfficeLocation = dto.OfficeLocation;
     employee.WorkSchedule = dto.WorkSchedule;
-    employee.Username = UsernameRules.Normalize(dto.Username);
 
     // Only re-hash if a new password was actually provided
     if (!string.IsNullOrWhiteSpace(dto.Password))
