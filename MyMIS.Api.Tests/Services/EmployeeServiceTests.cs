@@ -428,6 +428,33 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task GetByIdAsync_LegacyEmployeeWithoutEmploymentFields_ReturnsNulls()
+  {
+    // Arrange: seeded directly, the way a pre-migration row looks
+    var employee = new Employee
+    {
+      FirstName = "Legacy",
+      LastName = "Employee",
+      Gender = "Male",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-OLD-001",
+      Username = "legacy",
+      PasswordHash = "irrelevant-to-this-test",
+    };
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.GetByIdAsync(employee.Id);
+
+    // Assert
+    Assert.NotNull(result);
+    Assert.Null(result.EmployeeType);
+    Assert.Null(result.EmploymentStatus);
+    Assert.Null(result.JoiningDate);
+  }
+
+  [Fact]
   public async Task CreateAsync_HashesPassword_NeverStoresPlainText()
   {
     // Arrange
@@ -601,6 +628,41 @@ public class EmployeeServiceTests : IDisposable
       .AsNoTracking()
       .FirstAsync(e => e.Id == result.Id);
     Assert.Equal("jdoe", saved.Username);
+  }
+
+  [Fact]
+  public async Task CreateAsync_EmploymentFieldsProvided_PersistsAndReturnsThem()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "mreyes",
+      Password = "irrelevant-to-this-test",
+      EmployeeType = EmployeeType.Client,
+      EmploymentStatus = EmploymentStatus.Probationary,
+      JoiningDate = new DateOnly(2026, 10, 5),
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: in the response...
+    Assert.Equal(EmployeeType.Client, result.EmployeeType);
+    Assert.Equal(EmploymentStatus.Probationary, result.EmploymentStatus);
+    Assert.Equal(new DateOnly(2026, 10, 5), result.JoiningDate);
+
+    // ...and in the database
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == result.Id);
+    Assert.Equal(EmployeeType.Client, saved.EmployeeType);
+    Assert.Equal(EmploymentStatus.Probationary, saved.EmploymentStatus);
+    Assert.Equal(new DateOnly(2026, 10, 5), saved.JoiningDate);
   }
 
   [Fact]
@@ -941,6 +1003,88 @@ public class EmployeeServiceTests : IDisposable
     Assert.Equal("Santos-Reyes", saved.LastName);
     Assert.Equal("avatars/1.jpg", saved.AvatarUrl);
     Assert.Equal("avatars-thumbnails/1.jpg", saved.AvatarThumbnailUrl);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_EmploymentStatusAndJoiningDateProvided_UpdatesThem()
+  {
+    // Arrange
+    var created = await _service.CreateAsync(new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "mreyes",
+      Password = "irrelevant-to-this-test",
+      EmployeeType = EmployeeType.Client,
+      EmploymentStatus = EmploymentStatus.Probationary,
+      JoiningDate = new DateOnly(2026, 10, 5),
+    });
+
+    var updateDto = new EmployeeUpdateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "mreyes",
+      EmploymentStatus = EmploymentStatus.Regular,   // <- changed
+      JoiningDate = new DateOnly(2026, 11, 1),       // <- changed
+    };
+
+    // Act
+    await _service.UpdateAsync(created.Id, updateDto);
+
+    // Assert
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == created.Id);
+    Assert.Equal(EmploymentStatus.Regular, saved.EmploymentStatus);
+    Assert.Equal(new DateOnly(2026, 11, 1), saved.JoiningDate);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ExistingEmployeeType_LeavesItUnchanged()
+  {
+    // Arrange
+    var created = await _service.CreateAsync(new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "mreyes",
+      Password = "irrelevant-to-this-test",
+      EmployeeType = EmployeeType.Client,
+      EmploymentStatus = EmploymentStatus.Probationary,
+      JoiningDate = new DateOnly(2026, 10, 5),
+    });
+
+    var updateDto = new EmployeeUpdateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes-Santos",   // an unrelated change, so the update really does something
+      Gender = "Female",
+      MaritalStatus = "Married",
+      EmployeeCode = "EMP-001",
+      Username = "mreyes",
+      EmploymentStatus = EmploymentStatus.Regular,
+      JoiningDate = new DateOnly(2026, 10, 5),
+    };
+
+    // Act
+    await _service.UpdateAsync(created.Id, updateDto);
+
+    // Assert: type is fixed for the life of the record
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == created.Id);
+    Assert.Equal(EmployeeType.Client, saved.EmployeeType);
+    Assert.Equal("Reyes-Santos", saved.LastName);
   }
 
   [Fact]
