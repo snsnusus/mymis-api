@@ -403,4 +403,15 @@ public class EmployeeService(
         e.EmployeeCode.ToLower().Contains(term));
 #pragma warning restore CA1862
   }
+
+  public async Task<bool> IsUsernameAvailableAsync(string username)
+  {
+    var normalized = UsernameRules.Normalize(username);
+
+    var taken = await _context.Employees
+      .IgnoreQueryFilters()
+      .AnyAsync(e => e.Username == normalized);
+
+    return !taken;
+  }
 }

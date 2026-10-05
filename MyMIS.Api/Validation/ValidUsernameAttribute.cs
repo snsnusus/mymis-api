@@ -3,7 +3,7 @@ using MyMIS.Api.Helpers;
 
 namespace MyMIS.Api.Validation;
 
-[AttributeUsage(AttributeTargets.Property)]
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter)]
 public sealed class ValidUsernameAttribute : ValidationAttribute
 {
   public ValidUsernameAttribute() : base(UsernameRules.Description) { }

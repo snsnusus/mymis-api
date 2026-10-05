@@ -5,6 +5,8 @@ using MyMIS.Api.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
+using System.ComponentModel.DataAnnotations;
+using MyMIS.Api.Validation;
 
 namespace MyMIS.Api.Controllers;
 
@@ -42,6 +44,15 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
 
     var results = await _employeeService.GetLookupAsync(search, safeLimit);
     return Ok(results);
+  }
+
+  [Authorize(Policy = "employees.create")]
+  [HttpGet("availability")]
+  public async Task<ActionResult<UsernameAvailabilityResponseDto>> CheckAvailability(
+  [FromQuery, Required, ValidUsername] string username)
+  {
+    var available = await _employeeService.IsUsernameAvailableAsync(username);
+    return Ok(new UsernameAvailabilityResponseDto { Available = available });
   }
 
   [Authorize]
