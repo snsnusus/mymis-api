@@ -31,9 +31,6 @@ public class EmployeeCreateDto
   [JsonConverter(typeof(JsonStringEnumConverter))]
   public AvatarStyle? AvatarStyle { get; set; }
 
-  [Required, MaxLength(50)]
-  public string EmployeeCode { get; set; } = string.Empty;
-
   [Required]
   [EnumDataType(typeof(EmployeeType))]
   [JsonConverter(typeof(JsonStringEnumConverter))]

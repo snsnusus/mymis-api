@@ -44,6 +44,7 @@ builder.Services.AddScoped<RegionService>();
 builder.Services.AddScoped<S3UploadService>();
 builder.Services.AddScoped<TokenService>();
 
+builder.Services.AddScoped<IEmployeeCodeGenerator, EmployeeCodeGenerator>();
 builder.Services.AddScoped<IAuthorizationHandler, DepartmentScopeHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, SameDepartmentHandler>();

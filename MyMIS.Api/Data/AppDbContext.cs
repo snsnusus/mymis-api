@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Data;
@@ -219,5 +220,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         entity.Property(c => c.LimitAmount).HasPrecision(12, 2);
       });
+
+    modelBuilder.HasSequence<long>(EmployeeCodeFormat.SequenceName)
+      .StartsAt(1)
+      .IncrementsBy(1);
   }
 }

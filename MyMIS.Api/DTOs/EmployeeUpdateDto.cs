@@ -34,9 +34,6 @@ public class EmployeeUpdateDto
   [Required]
   public string MaritalStatus { get; set; } = string.Empty;
 
-  [Required, MaxLength(50)]
-  public string EmployeeCode { get; set; } = string.Empty;
-
   [Required]
   [EnumDataType(typeof(EmploymentStatus))]
   [JsonConverter(typeof(JsonStringEnumConverter))]

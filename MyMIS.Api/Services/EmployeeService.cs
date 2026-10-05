@@ -6,14 +6,23 @@ using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Services;
 
-public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3UploadService s3UploadService)
+public class EmployeeService(
+    AppDbContext context,
+    HobbyService hobbyService,
+    S3UploadService s3UploadService,
+    IEmployeeCodeGenerator employeeCodeGenerator
+  )
 {
   private readonly AppDbContext _context = context;
   private readonly HobbyService _hobbyService = hobbyService;
   private readonly S3UploadService _s3UploadService = s3UploadService;
+  private readonly IEmployeeCodeGenerator _employeeCodeGenerator = employeeCodeGenerator;
 
   public async Task<PagedResult<EmployeeSummaryResponseDto>> GetPagedAsync(
-    string? search, int page, int pageSize)
+      string? search,
+      int page,
+      int pageSize
+    )
   {
     // Filter once, then count AND page that same filtered query.
     var query = ApplySearch(_context.Employees, search);
@@ -168,6 +177,8 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
 
   public async Task<EmployeeResponseDto> CreateAsync(EmployeeCreateDto dto)
   {
+    var employeeCode = await _employeeCodeGenerator.GenerateAsync();
+
     var employee = new Employee
     {
       FirstName = dto.FirstName,
@@ -180,7 +191,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       MaritalStatus = dto.MaritalStatus,
       Username = UsernameRules.Normalize(dto.Username),
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-      EmployeeCode = dto.EmployeeCode,
+      EmployeeCode = employeeCode,
       EmployeeType = dto.EmployeeType,
       EmploymentStatus = dto.EmploymentStatus,
       DepartmentId = dto.DepartmentId,
@@ -221,7 +232,6 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
     employee.Birthdate = dto.Birthdate;
     employee.MaritalStatus = dto.MaritalStatus;
     employee.Username = UsernameRules.Normalize(dto.Username);
-    employee.EmployeeCode = dto.EmployeeCode;
     employee.EmploymentStatus = dto.EmploymentStatus;
     employee.JoiningDate = dto.JoiningDate;
     employee.OfficeLocation = dto.OfficeLocation;

@@ -39,8 +39,13 @@ public class EmployeeServiceTests : IDisposable
         .Setup(client => client.GetPreSignedURL(It.IsAny<GetPreSignedUrlRequest>()))
         .Returns((GetPreSignedUrlRequest request) => $"https://fake-presigned-url.test/{request.Key}");
     var s3UploadService = new S3UploadService(mockS3Client.Object, s3Options);
+    var codeCounter = 0;
+    var mockCodeGenerator = new Mock<IEmployeeCodeGenerator>();
+    mockCodeGenerator
+        .Setup(generator => generator.GenerateAsync())
+        .ReturnsAsync(() => $"MYMIS-TEST-{++codeCounter:D5}");
 
-    _service = new EmployeeService(_context, hobbyService, s3UploadService);
+    _service = new EmployeeService(_context, hobbyService, s3UploadService, mockCodeGenerator.Object);
   }
 
   public void Dispose()
@@ -464,7 +469,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP001",
       Username = "jdoe",
       Password = "SuperSecret123"
     };
@@ -511,7 +515,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "MALE",
       MaritalStatus = "SINGLE",
-      EmployeeCode = "EMP-001",
       Username = "johndoe",
       Password = "irrelevant-to-this-test",
       DepartmentId = department.Id,
@@ -541,7 +544,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "MALE",
       MaritalStatus = "SINGLE",
-      EmployeeCode = "EMP-001",
       Username = "johndoe",
       Password = "irrelevant-to-this-test",
     };
@@ -563,7 +565,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "jdoe",
       Password = "irrelevant-to-this-test",
       AvatarStyle = AvatarStyle.Constellation,
@@ -591,7 +592,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "jdoe",
       Password = "irrelevant-to-this-test",
     };
@@ -613,7 +613,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "  JDoe  ",
       Password = "irrelevant-to-this-test",
     };
@@ -640,7 +639,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Reyes",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "mreyes",
       Password = "irrelevant-to-this-test",
       EmployeeType = EmployeeType.Client,
@@ -675,7 +673,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "jdoe",
       Password = "irrelevant-to-this-test",
     });
@@ -686,7 +683,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Doe",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "  NewName  ", // <- the behavior under test
     };
 
@@ -710,7 +706,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Wong",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP003",
       Username = "awong",
       Password = "OriginalPass1"
     };
@@ -724,7 +719,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Wong-Updated",
       Gender = "Female",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP003",
       Username = "awong",
       Password = null // <- the behavior under test
     };
@@ -748,7 +742,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Lee",
       Gender = "Male",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP004",
       Username = "blee",
       Password = "OldPassword1"
     };
@@ -761,7 +754,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Lee",
       Gender = "Male",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP004",
       Username = "blee",
       Password = "NewPassword2"
     };
@@ -785,7 +777,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "Male",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP002",
       Username = "jsmith",
       Password = "irrelevant-for-this-test",
     };
@@ -797,7 +788,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "Male",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP002",
       Username = "jsmith",
       PersonalDetail = new EmployeePersonalDetailUpdateDto
       {
@@ -847,7 +837,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "Male",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP002",
       Username = "jsmith",
       PersonalDetail = new EmployeePersonalDetailUpdateDto
       {
@@ -906,7 +895,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "Male",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP002",
       Username = "jsmith",
       PersonalDetail = new EmployeePersonalDetailUpdateDto
       {
@@ -955,7 +943,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "Male",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP002",
       Username = "jsmith",
     };
 
@@ -989,7 +976,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Santos-Reyes",
       Gender = "MALE",
       MaritalStatus = "SINGLE",
-      EmployeeCode = "EMP-001",
       Username = "emp-001",
     };
 
@@ -1015,7 +1001,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Reyes",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "mreyes",
       Password = "irrelevant-to-this-test",
       EmployeeType = EmployeeType.Client,
@@ -1029,7 +1014,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Reyes",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "mreyes",
       EmploymentStatus = EmploymentStatus.Regular,   // <- changed
       JoiningDate = new DateOnly(2026, 11, 1),       // <- changed
@@ -1056,7 +1040,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Reyes",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP-001",
       Username = "mreyes",
       Password = "irrelevant-to-this-test",
       EmployeeType = EmployeeType.Client,
@@ -1070,7 +1053,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Reyes-Santos",   // an unrelated change, so the update really does something
       Gender = "Female",
       MaritalStatus = "Married",
-      EmployeeCode = "EMP-001",
       Username = "mreyes",
       EmploymentStatus = EmploymentStatus.Regular,
       JoiningDate = new DateOnly(2026, 10, 5),
@@ -1169,7 +1151,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "MALE",
       MaritalStatus = "SINGLE",
-      EmployeeCode = "EMP-001",
       Username = "jsmith",
       Password = "irrelevant-to-this-test"
     };
@@ -1247,7 +1228,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Vargas",
       Gender = "FEMALE",
       MaritalStatus = "SINGLE",
-      EmployeeCode = "EMP-001",
       Username = "sofialeighvargas",
       Password = "irrelevant-to-this-test",
       OfficeLocation = "Manila",
@@ -1306,7 +1286,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Smith",
       Gender = "MALE",
       MaritalStatus = "SINGLE",
-      EmployeeCode = "EMP-001",
       Username = "johnsmith",
       Password = "irrelevant-for-this-test",
       OfficeLocation = "Pasig",
@@ -1337,7 +1316,6 @@ public class EmployeeServiceTests : IDisposable
       LastName = "Reyes",
       Gender = "Female",
       MaritalStatus = "Single",
-      EmployeeCode = "EMP005",
       Username = "creyes",
       Password = "SomePassword1"
     };
