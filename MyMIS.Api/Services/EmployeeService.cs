@@ -39,6 +39,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
         AvatarUrl = e.AvatarUrl,
         AvatarThumbnailUrl = e.AvatarThumbnailUrl,
         PositionTitle = e.Position != null ? e.Position.Title : null,
+        AvatarStyle = e.AvatarStyle,
       })
       .ToListAsync();
 
@@ -79,6 +80,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
         PositionTitle = e.Position != null ? e.Position.Title : null,
         DepartmentId = e.DepartmentId,
         AvatarUrl = e.AvatarThumbnailUrl ?? e.AvatarUrl,
+        AvatarStyle = e.AvatarStyle,
       })
       .ToListAsync();
 
@@ -116,6 +118,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       Suffix = employee.Suffix,
       AvatarUrl = employee.AvatarUrl,
       AvatarThumbnailUrl = employee.AvatarThumbnailUrl,
+      AvatarStyle = employee.AvatarStyle,
       Gender = employee.Gender,
       Birthdate = employee.Birthdate,
       MaritalStatus = employee.MaritalStatus,
@@ -252,6 +255,22 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
 
     await _context.SaveChangesAsync();
     return await GetByIdAsync(employee.Id);
+  }
+
+  public async Task<bool> UpdateAvatarStyleAsync(int employeeId, AvatarStyle avatarStyle)
+  {
+    var employee = await _context.Employees
+      .FirstOrDefaultAsync(e => e.Id == employeeId);
+
+    if (employee is null)
+    {
+      return false;
+    }
+
+    employee.AvatarStyle = avatarStyle;
+    await _context.SaveChangesAsync();
+
+    return true;
   }
 
   public async Task<EmployeeResponseDto?> UpdatePartialAsync(int id, EmployeePartialUpdateDto dto)

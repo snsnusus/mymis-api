@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using MyMIS.Api.Models;
+
 namespace MyMIS.Api.DTOs;
 
 public class EmployeeResponseDto
@@ -39,4 +42,7 @@ public class EmployeeResponseDto
   public EmployeePositionDto? Position { get; set; }
 
   public List<HobbyResponseDto> Hobbies { get; set; } = [];
+
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public AvatarStyle? AvatarStyle { get; set; }
 }

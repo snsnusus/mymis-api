@@ -100,6 +100,28 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
     return Ok(result);
   }
 
+  [Authorize]
+  [HttpPut("me/avatar-style")]
+  public async Task<IActionResult> UpdateAvatarStyleMe(EmployeeAvatarStyleUpdateDto dto)
+  {
+    var employeeIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+
+    if (employeeIdClaim is null || !int.TryParse(employeeIdClaim, out var employeeId))
+    {
+      return Unauthorized();
+    }
+
+    // [Required] has already rejected a missing value with a 400 by this point.
+    var updated = await _employeeService.UpdateAvatarStyleAsync(employeeId, dto.AvatarStyle!.Value);
+
+    if (!updated)
+    {
+      return NotFound();
+    }
+
+    return NoContent();
+  }
+
   [Authorize(Roles = "Admin,SuperAdmin")]
   [HttpPut("partial/{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> UpdatePartial(int id, EmployeePartialUpdateDto dto)

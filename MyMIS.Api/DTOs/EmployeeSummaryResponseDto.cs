@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using MyMIS.Api.Models;
+
 namespace MyMIS.Api.DTOs;
 
 public class EmployeeSummaryResponseDto
@@ -21,4 +24,7 @@ public class EmployeeSummaryResponseDto
   public string? AvatarThumbnailUrl { get; set; }
 
   public string? PositionTitle { get; set; }
+
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public AvatarStyle? AvatarStyle { get; set; }
 }
