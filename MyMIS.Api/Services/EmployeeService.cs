@@ -170,7 +170,6 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       MiddleName = dto.MiddleName,
       LastName = dto.LastName,
       Suffix = dto.Suffix,
-      AvatarUrl = dto.AvatarUrl,
       AvatarStyle = dto.AvatarStyle,
       Gender = dto.Gender,
       Birthdate = dto.Birthdate,
@@ -211,7 +210,6 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
     employee.MiddleName = dto.MiddleName;
     employee.LastName = dto.LastName;
     employee.Suffix = dto.Suffix;
-    employee.AvatarUrl = dto.AvatarUrl;
     employee.Gender = dto.Gender;
     employee.Birthdate = dto.Birthdate;
     employee.MaritalStatus = dto.MaritalStatus;

@@ -850,6 +850,38 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task UpdateAsync_KeepsUploadedAvatarKeys()
+  {
+    // Arrange: an employee with an uploaded photo and its thumbnail
+    var employee = NewEmployee("Maria", "Santos", "EMP-001");
+    employee.AvatarUrl = "avatars/1.jpg";
+    employee.AvatarThumbnailUrl = "avatars-thumbnails/1.jpg";
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var updateDto = new EmployeeUpdateDto
+    {
+      FirstName = "Maria",
+      LastName = "Santos-Reyes",
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      EmployeeCode = "EMP-001",
+      Username = "emp-001",
+    };
+
+    // Act
+    await _service.UpdateAsync(employee.Id, updateDto);
+
+    // Assert: the edit applied, and the avatar keys survived it
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == employee.Id);
+    Assert.Equal("Santos-Reyes", saved.LastName);
+    Assert.Equal("avatars/1.jpg", saved.AvatarUrl);
+    Assert.Equal("avatars-thumbnails/1.jpg", saved.AvatarThumbnailUrl);
+  }
+
+  [Fact]
   public async Task UpdateSelfAsync_NoPersonalDetailRowExists_CreatesOneWithoutThrowing()
   {
     // Arrange

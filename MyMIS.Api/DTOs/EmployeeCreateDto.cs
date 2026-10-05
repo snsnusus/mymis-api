@@ -43,8 +43,6 @@ public class EmployeeCreateDto
 
   public int? PositionId { get; set; }
 
-  public string? AvatarUrl { get; set; }
-
   [EnumDataType(typeof(AvatarStyle))]
   [JsonConverter(typeof(JsonStringEnumConverter))]
   public AvatarStyle? AvatarStyle { get; set; }
