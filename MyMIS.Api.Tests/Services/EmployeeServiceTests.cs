@@ -1800,5 +1800,36 @@ public class EmployeeServiceTests : IDisposable
     // Assert
     Assert.False(available);
   }
+
+  [Fact]
+  public async Task IsUsernameAvailableAsync_OwnUsernameExcluded_ReturnsTrue()
+  {
+    // Arrange
+    var employee = NewEmployee("Juan", "Cruz", "EMP-001");   // username "emp-001"
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    // Act: the employee keeping their own username during an update
+    var available = await _service.IsUsernameAvailableAsync("emp-001", excludeEmployeeId: employee.Id);
+
+    // Assert
+    Assert.True(available);
+  }
+
+  [Fact]
+  public async Task IsUsernameAvailableAsync_OtherEmployeesUsernameWithExclude_ReturnsFalse()
+  {
+    // Arrange
+    var juan = NewEmployee("Juan", "Cruz", "EMP-001");     // username "emp-001"
+    var maria = NewEmployee("Maria", "Reyes", "EMP-002");  // username "emp-002"
+    _context.Employees.AddRange(juan, maria);
+    await _context.SaveChangesAsync();
+
+    // Act: Maria trying to take Juan's username
+    var available = await _service.IsUsernameAvailableAsync("emp-001", excludeEmployeeId: maria.Id);
+
+    // Assert
+    Assert.False(available);
+  }
 }
 
