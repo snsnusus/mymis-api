@@ -45,7 +45,8 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
     return new AuthResponseDto
     {
       AccessToken = accessToken,
-      RefreshToken = rawRefreshToken
+      RefreshToken = rawRefreshToken,
+      MustChangePassword = employee.MustChangePassword,
     };
   }
 
@@ -102,7 +103,8 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
     return new AuthResponseDto
     {
       AccessToken = newAccessToken,
-      RefreshToken = newRawRefreshToken
+      RefreshToken = newRawRefreshToken,
+      MustChangePassword = existingToken.Employee.MustChangePassword,
     };
   }
 
@@ -133,6 +135,7 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
     }
 
     employee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+    employee.MustChangePassword = false;
 
     var activeTokens = await _context.RefreshTokens
         .Where(rt => rt.EmployeeId == employeeId && rt.RevokedAt == null)

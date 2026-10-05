@@ -193,6 +193,7 @@ public class EmployeeService(
       MaritalStatus = dto.MaritalStatus,
       Username = UsernameRules.Normalize(dto.Username),
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+      MustChangePassword = true,
       EmployeeCode = employeeCode,
       EmployeeType = dto.EmployeeType,
       EmploymentStatus = dto.EmploymentStatus,
@@ -243,6 +244,7 @@ public class EmployeeService(
     if (!string.IsNullOrWhiteSpace(dto.Password))
     {
       employee.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+      employee.MustChangePassword = true;   // HR-set passwords are temporary
     }
 
     employee.PersonalDetail ??= new EmployeePersonalDetail();

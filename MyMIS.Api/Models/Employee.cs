@@ -33,6 +33,8 @@ public class Employee
   [Required]
   public string PasswordHash { get; set; } = string.Empty;
 
+  public bool MustChangePassword { get; set; }
+
   public string? AvatarUrl { get; set; }
 
   public AvatarStyle? AvatarStyle { get; set; }
