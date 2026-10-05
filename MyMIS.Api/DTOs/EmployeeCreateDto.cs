@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using MyMIS.Api.Dtos;
 using MyMIS.Api.Models;
 using MyMIS.Api.Validation;
 
@@ -62,5 +63,8 @@ public class EmployeeCreateDto
   // CreateAsync still attaches a PersonalDetail row either way,
   // just with all-null fields in that case.
   public EmployeePersonalDetailCreateDto? PersonalDetail { get; set; }
+
+  [Required]
+  public EmergencyContactCreateDto? EmergencyContact { get; set; }
 
 }

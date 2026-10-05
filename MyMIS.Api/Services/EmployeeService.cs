@@ -109,15 +109,25 @@ public class EmployeeService(
     return results;
   }
 
-  public async Task<EmployeeResponseDto?> GetByIdAsync(int id)
+  public async Task<EmployeeResponseDto?> GetByIdAsync(int id, bool includeEmergencyContacts)
   {
-    var employee = await _context.Employees
+    IQueryable<Employee> query = _context.Employees
         .Include(e => e.Department)
         .Include(e => e.PersonalDetail)
         .Include(e => e.Position)
         .Include(e => e.EmployeeHobbies)
-            .ThenInclude(eh => eh.Hobby)
-        .FirstOrDefaultAsync(e => e.Id == id);
+            .ThenInclude(eh => eh.Hobby);
+
+    if (includeEmergencyContacts)
+    {
+      query = query
+        .Include(e => e.EmergencyContacts)
+          .ThenInclude(c => c.Address!.Barangay)
+            .ThenInclude(b => b.City)
+              .ThenInclude(city => city.Region);
+    }
+
+    var employee = await query.AsSplitQuery().FirstOrDefaultAsync(e => e.Id == id);
 
     if (employee is null) return null;
 
@@ -161,7 +171,14 @@ public class EmployeeService(
         IsActive = employee.Position.IsActive,
         IsApprover = employee.Position.IsApprover
       },
-      Hobbies = [.. employee.EmployeeHobbies.Select(eh => new HobbyResponseDto { Id = eh.Hobby.Id, Name = eh.Hobby.Name })]
+      EmergencyContacts = includeEmergencyContacts
+        ? [.. employee.EmergencyContacts
+            .OrderByDescending(c => c.IsPrimary)
+            .ThenBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id)
+            .Select(EmergencyContactService.MapToResponse)]
+        : null,
+      Hobbies = [.. employee.EmployeeHobbies.Select(eh => new HobbyResponseDto { Id = eh.Hobby.Id, Name = eh.Hobby.Name })],
     };
 
     if (!string.IsNullOrEmpty(responseDto.AvatarUrl))
@@ -213,10 +230,20 @@ public class EmployeeService(
       }
     };
 
+    if (dto.EmergencyContact is not null)
+    {
+      var contactPhone = PhoneFormatter.TryNormalize(dto.EmergencyContact.Phone!)
+        ?? throw new InvalidOperationException(
+          "The emergency contact must be validated before CreateAsync is called.");
+
+      employee.EmergencyContacts.Add(
+        EmergencyContactService.NewEntity(dto.EmergencyContact, contactPhone, isPrimary: true));
+    }
+
     _context.Employees.Add(employee);
     await SaveChangesCheckingUsernameAsync(); ;
 
-    return await GetByIdAsync(employee.Id)
+    return (await GetByIdAsync(employee.Id, includeEmergencyContacts: true))!
         ?? throw new InvalidOperationException("Failed to reload newly created employee.");
   }
   public async Task<EmployeeResponseDto?> UpdateAsync(int id, EmployeeUpdateDto dto)
@@ -256,7 +283,7 @@ public class EmployeeService(
     employee.PersonalDetail.Bio = dto.PersonalDetail?.Bio;
 
     await SaveChangesCheckingUsernameAsync();
-    return await GetByIdAsync(employee.Id);
+    return (await GetByIdAsync(employee.Id, includeEmergencyContacts: true))!;
   }
 
   public async Task<EmployeeResponseDto?> UpdateSelfAsync(int employeeId, EmployeeSelfUpdateDto dto)
@@ -276,7 +303,19 @@ public class EmployeeService(
     employee.PersonalDetail.Bio = dto.Bio;
 
     await _context.SaveChangesAsync();
-    return await GetByIdAsync(employee.Id);
+    return await GetByIdAsync(employee.Id, includeEmergencyContacts: true);
+  }
+
+  public async Task<EmployeeResponseDto?> UpdatePartialAsync(int id, EmployeePartialUpdateDto dto)
+  {
+    var employee = await _context.Employees.FindAsync(id);
+    if (employee is null) return null;
+
+    employee.OfficeLocation = dto.OfficeLocation;
+    employee.WorkSchedule = dto.WorkSchedule;
+
+    await _context.SaveChangesAsync();
+    return await GetByIdAsync(employee.Id, includeEmergencyContacts: false);
   }
 
   public async Task<bool> UpdateAvatarStyleAsync(int employeeId, AvatarStyle avatarStyle)
@@ -293,18 +332,6 @@ public class EmployeeService(
     await _context.SaveChangesAsync();
 
     return true;
-  }
-
-  public async Task<EmployeeResponseDto?> UpdatePartialAsync(int id, EmployeePartialUpdateDto dto)
-  {
-    var employee = await _context.Employees.FindAsync(id);
-    if (employee is null) return null;
-
-    employee.OfficeLocation = dto.OfficeLocation;
-    employee.WorkSchedule = dto.WorkSchedule;
-
-    await _context.SaveChangesAsync();
-    return await GetByIdAsync(employee.Id);
   }
 
   public async Task<bool> DeleteAsync(int id)

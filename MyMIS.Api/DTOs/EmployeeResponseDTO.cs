@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using MyMIS.Api.Dtos;
 using MyMIS.Api.Models;
 
 namespace MyMIS.Api.DTOs;
@@ -43,7 +44,6 @@ public class EmployeeResponseDto
 
   public string? WorkSchedule { get; set; }
 
-
   public int? DepartmentId { get; set; }
 
   public string? DepartmentName { get; set; }
@@ -53,6 +53,6 @@ public class EmployeeResponseDto
 
   public List<HobbyResponseDto> Hobbies { get; set; } = [];
 
-
+  public List<EmergencyContactResponseDto>? EmergencyContacts { get; set; }
 
 }

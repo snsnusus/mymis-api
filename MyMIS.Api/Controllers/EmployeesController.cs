@@ -4,18 +4,19 @@ using MyMIS.Api.DTOs;
 using MyMIS.Api.Exceptions;
 using MyMIS.Api.Services;
 using MyMIS.Api.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
-using System.ComponentModel.DataAnnotations;
 
 namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EmployeesController(EmployeeService employeeService, IAuthorizationService authorizationService) : ControllerBase
+public class EmployeesController(EmployeeService employeeService, EmergencyContactService emergencyContactService, IAuthorizationService authorizationService) : ControllerBase
 {
   private readonly EmployeeService _employeeService = employeeService;
+  private readonly EmergencyContactService _emergencyContactService = emergencyContactService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
 
   [Authorize]
@@ -60,7 +61,9 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
   [HttpGet("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> GetById(int id)
   {
-    var employee = await _employeeService.GetByIdAsync(id);
+    var canSeeContacts = await CanSeeEmergencyContactsAsync(id);
+    var employee = await _employeeService.GetByIdAsync(id, includeEmergencyContacts: canSeeContacts);
+
     if (employee is null) return NotFound();
     return Ok(employee);
   }
@@ -69,6 +72,13 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
   [HttpPost]
   public async Task<ActionResult<EmployeeResponseDto>> Create(EmployeeCreateDto dto)
   {
+    var (_, contactError) = await _emergencyContactService.ValidateAsync(dto.EmergencyContact!);
+    if (contactError is not null)
+    {
+      ModelState.AddModelError(nameof(dto.EmergencyContact), contactError);
+      return ValidationProblem(ModelState);
+    }
+
     if (!await _employeeService.IsUsernameAvailableAsync(dto.Username))
     {
       return UsernameTakenConflict();
@@ -89,7 +99,10 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
   [HttpPut("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> Update(int id, EmployeeUpdateDto dto)
   {
-    if (await _employeeService.GetByIdAsync(id) is null)
+    var canSeeContacts = await CanSeeEmergencyContactsAsync(id);
+    var employee = await _employeeService.GetByIdAsync(id, includeEmergencyContacts: canSeeContacts);
+
+    if (employee is null)
     {
       return NotFound();
     }
@@ -332,5 +345,34 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
     };
 
     return Conflict(problem);
+  }
+
+  // Emergency contacts are visible to the employee themselves and to anyone
+  // who can create or update employees. SuperAdmin passes via PermissionHandler.
+  private async Task<bool> CanSeeEmergencyContactsAsync(int employeeId)
+  {
+    if (GetCurrentEmployeeId() == employeeId)
+    {
+      return true;
+    }
+
+    foreach (var policy in new[] { "employees.update", "employees.create" })
+    {
+      var result = await _authorizationService.AuthorizeAsync(User, policy);
+      if (result.Succeeded)
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // The logged-in employee's ID, read from the JWT "sub" claim.
+  // Returns null if the claim is missing or isn't a number.
+  private int? GetCurrentEmployeeId()
+  {
+    var sub = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+    return int.TryParse(sub, out var id) ? id : null;
   }
 }
