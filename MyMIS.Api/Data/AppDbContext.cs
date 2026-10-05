@@ -52,14 +52,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasConversion<string>()
       .HasMaxLength(20);
 
-    modelBuilder.Entity<RefreshToken>()
-      .HasIndex(r => r.TokenHash)
+    modelBuilder.Entity<Employee>()
+    .HasIndex(e => e.Username)
+    .IsUnique();
+
+    modelBuilder.Entity<Employee>()
+      .HasIndex(e => e.EmployeeCode)
       .IsUnique();
 
     modelBuilder.Entity<Employee>()
       .HasOne(e => e.PersonalDetail)
       .WithOne(pd => pd.Employee)
       .HasForeignKey<EmployeePersonalDetail>(pd => pd.EmployeeId);
+
+    modelBuilder.Entity<Employee>()
+      .HasOne(e => e.Position)
+      .WithMany()
+      .HasForeignKey(e => e.PositionId)
+      .OnDelete(DeleteBehavior.SetNull);
+
+    modelBuilder.Entity<RefreshToken>()
+      .HasIndex(r => r.TokenHash)
+      .IsUnique();
 
     modelBuilder.Entity<EmployeeHobby>()
       .HasKey(eh => new { eh.EmployeeId, eh.HobbyId });
@@ -104,11 +118,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasIndex(h => h.NormalizedName)
       .IsUnique();
 
-    modelBuilder.Entity<Employee>()
-      .HasOne(e => e.Position)
-      .WithMany()
-      .HasForeignKey(e => e.PositionId)
-      .OnDelete(DeleteBehavior.SetNull);
+
 
     modelBuilder.Entity<City>()
       .HasOne(c => c.Region)
