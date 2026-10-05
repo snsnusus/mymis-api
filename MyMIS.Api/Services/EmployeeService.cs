@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Exceptions;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
+using Npgsql;
 
 namespace MyMIS.Api.Services;
 
@@ -211,7 +213,7 @@ public class EmployeeService(
     };
 
     _context.Employees.Add(employee);
-    await _context.SaveChangesAsync();
+    await SaveChangesCheckingUsernameAsync(); ;
 
     return await GetByIdAsync(employee.Id)
         ?? throw new InvalidOperationException("Failed to reload newly created employee.");
@@ -251,7 +253,7 @@ public class EmployeeService(
     employee.PersonalDetail.Religion = dto.PersonalDetail?.Religion;
     employee.PersonalDetail.Bio = dto.PersonalDetail?.Bio;
 
-    await _context.SaveChangesAsync();
+    await SaveChangesCheckingUsernameAsync();
     return await GetByIdAsync(employee.Id);
   }
 
@@ -404,14 +406,39 @@ public class EmployeeService(
 #pragma warning restore CA1862
   }
 
-  public async Task<bool> IsUsernameAvailableAsync(string username)
+  public async Task<bool> IsUsernameAvailableAsync(string username, int? excludeEmployeeId = null)
   {
     var normalized = UsernameRules.Normalize(username);
 
-    var taken = await _context.Employees
+    var query = _context.Employees
       .IgnoreQueryFilters()
-      .AnyAsync(e => e.Username == normalized);
+      .Where(e => e.Username == normalized);
 
+    if (excludeEmployeeId is int idToExclude)
+    {
+      query = query.Where(e => e.Id != idToExclude);
+    }
+
+    var taken = await query.AnyAsync();
     return !taken;
+  }
+
+  // Saves, turning a unique-index collision on Username into a DuplicateUsernameException.
+  // The controller's pre-check catches the normal case; this only fires when two
+  // requests race past the pre-check with the same username.
+  private async Task SaveChangesCheckingUsernameAsync()
+  {
+    try
+    {
+      await _context.SaveChangesAsync();
+    }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+    {
+      SqlState: PostgresErrorCodes.UniqueViolation,
+      ConstraintName: "IX_Employees_Username",
+    })
+    {
+      throw new DuplicateUsernameException(ex);
+    }
   }
 }

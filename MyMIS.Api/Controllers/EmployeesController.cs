@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Exceptions;
 using MyMIS.Api.Services;
+using MyMIS.Api.Validation;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
 using System.ComponentModel.DataAnnotations;
-using MyMIS.Api.Validation;
 
 namespace MyMIS.Api.Controllers;
 
@@ -68,17 +69,46 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
   [HttpPost]
   public async Task<ActionResult<EmployeeResponseDto>> Create(EmployeeCreateDto dto)
   {
-    var created = await _employeeService.CreateAsync(dto);
-    return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    if (!await _employeeService.IsUsernameAvailableAsync(dto.Username))
+    {
+      return UsernameTakenConflict();
+    }
+
+    try
+    {
+      var created = await _employeeService.CreateAsync(dto);
+      return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+    catch (DuplicateUsernameException)
+    {
+      return UsernameTakenConflict();
+    }
   }
 
   [Authorize(Policy = "employees.update")]
   [HttpPut("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> Update(int id, EmployeeUpdateDto dto)
   {
-    var updated = await _employeeService.UpdateAsync(id, dto);
-    if (updated is null) return NotFound();
-    return Ok(updated);
+    if (await _employeeService.GetByIdAsync(id) is null)
+    {
+      return NotFound();
+    }
+
+    if (!await _employeeService.IsUsernameAvailableAsync(dto.Username, excludeEmployeeId: id))
+    {
+      return UsernameTakenConflict();
+    }
+
+    try
+    {
+      var updated = await _employeeService.UpdateAsync(id, dto);
+      if (updated is null) return NotFound();
+      return Ok(updated);
+    }
+    catch (DuplicateUsernameException)
+    {
+      return UsernameTakenConflict();
+    }
   }
 
   [Authorize(Roles = "SuperAdmin")]
@@ -286,5 +316,21 @@ public class EmployeesController(EmployeeService employeeService, IAuthorization
 
     return providedBytes.Length == expectedBytes.Length
         && CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
+  }
+
+  // 409 in the same shape as a validation error, so the portal can show it
+  // under the Username field exactly like a 400 from [ValidUsername].
+  private ConflictObjectResult UsernameTakenConflict()
+  {
+    var problem = new ValidationProblemDetails(new Dictionary<string, string[]>
+    {
+      ["Username"] = [DuplicateUsernameException.DefaultMessage],
+    })
+    {
+      Status = StatusCodes.Status409Conflict,
+      Title = "Username already taken.",
+    };
+
+    return Conflict(problem);
   }
 }
