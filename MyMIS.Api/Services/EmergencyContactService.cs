@@ -6,14 +6,9 @@ using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Services;
 
-public class EmergencyContactService
+public class EmergencyContactService(AppDbContext context)
 {
-  private readonly AppDbContext _context;
-
-  public EmergencyContactService(AppDbContext context)
-  {
-    _context = context;
-  }
+  private readonly AppDbContext _context = context;
 
   public async Task<List<EmergencyContactResponseDto>?> GetAllAsync(int employeeId)
   {
@@ -59,15 +54,8 @@ public class EmergencyContactService
         .AnyAsync(c => c.EmployeeId == employeeId);
     var makePrimary = !hasContacts || dto.IsPrimary;
 
-    var now = DateTime.UtcNow;
-    var contact = new EmergencyContact
-    {
-      EmployeeId = employeeId,
-      IsPrimary = makePrimary,
-      CreatedAt = now,
-      UpdatedAt = now,
-    };
-    ApplyDto(contact, dto, phone!);
+    var contact = NewEntity(dto, phone!, makePrimary);
+    contact.EmployeeId = employeeId;
 
     await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -196,7 +184,7 @@ public class EmergencyContactService
     await _context.SaveChangesAsync();
   }
 
-  private async Task<(Phone? Phone, string? Error)> ValidateAsync(EmergencyContactCreateDto dto)
+  public async Task<(Phone? Phone, string? Error)> ValidateAsync(EmergencyContactCreateDto dto)
   {
     var phone = PhoneFormatter.TryNormalize(dto.Phone!);
     if (phone is null)
@@ -237,10 +225,25 @@ public class EmergencyContactService
       };
   }
 
+  // Builds a new, unsaved contact. Used by CreateAsync here and by
+  // EmployeeService.CreateAsync, which saves it together with a new employee.
+  public static EmergencyContact NewEntity(EmergencyContactCreateDto dto, Phone phone, bool isPrimary)
+  {
+    var now = DateTime.UtcNow;
+    var contact = new EmergencyContact
+    {
+      IsPrimary = isPrimary,
+      CreatedAt = now,
+      UpdatedAt = now,
+    };
+    ApplyDto(contact, dto, phone);
+    return contact;
+  }
+
   private static string? NullIfBlank(string? value) =>
       string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-  private static EmergencyContactResponseDto MapToResponse(EmergencyContact c) => new()
+  public static EmergencyContactResponseDto MapToResponse(EmergencyContact c) => new()
   {
     Id = c.Id,
     FirstName = c.FirstName,
@@ -274,4 +277,9 @@ public class EmergencyContactService
       },
     IsPrimary = c.IsPrimary,
   };
+
+  internal static object MapToResponse(EmergencyContact contact, int arg2)
+  {
+    throw new NotImplementedException();
+  }
 }
