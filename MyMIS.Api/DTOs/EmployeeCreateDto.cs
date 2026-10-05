@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using MyMIS.Api.Models;
+using MyMIS.Api.Validation;
 
 namespace MyMIS.Api.DTOs;
 
@@ -33,7 +34,7 @@ public class EmployeeCreateDto
 
   public string? WorkSchedule { get; set; }
 
-  [Required]
+  [Required, ValidUsername]
   public string Username { get; set; } = string.Empty;
 
   [Required, MinLength(8)]

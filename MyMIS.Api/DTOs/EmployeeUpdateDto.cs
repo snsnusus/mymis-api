@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MyMIS.Api.Validation;
 
 namespace MyMIS.Api.DTOs;
 
@@ -31,7 +32,7 @@ public class EmployeeUpdateDto
 
   public string? WorkSchedule { get; set; }
 
-  [Required]
+  [Required, ValidUsername]
   public string Username { get; set; } = string.Empty;
 
   // Optional on update — null/empty means "don't change the password"

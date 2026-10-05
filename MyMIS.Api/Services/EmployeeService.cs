@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Services;
@@ -177,7 +178,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       EmployeeCode = dto.EmployeeCode,
       OfficeLocation = dto.OfficeLocation,
       WorkSchedule = dto.WorkSchedule,
-      Username = dto.Username,
+      Username = UsernameRules.Normalize(dto.Username),
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
       DepartmentId = dto.DepartmentId,
       PositionId = dto.PositionId,
@@ -216,7 +217,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
     employee.EmployeeCode = dto.EmployeeCode;
     employee.OfficeLocation = dto.OfficeLocation;
     employee.WorkSchedule = dto.WorkSchedule;
-    employee.Username = dto.Username;
+    employee.Username = UsernameRules.Normalize(dto.Username);
 
     // Only re-hash if a new password was actually provided
     if (!string.IsNullOrWhiteSpace(dto.Password))
