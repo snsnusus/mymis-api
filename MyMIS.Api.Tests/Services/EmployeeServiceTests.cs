@@ -527,6 +527,56 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task CreateAsync_AvatarStyleProvided_PersistsAndReturnsStyle()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Jane",
+      LastName = "Doe",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "jdoe",
+      Password = "irrelevant-to-this-test",
+      AvatarStyle = AvatarStyle.Constellation,
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: returned in the response AND saved in the database
+    Assert.Equal(AvatarStyle.Constellation, result.AvatarStyle);
+
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == result.Id);
+    Assert.Equal(AvatarStyle.Constellation, saved.AvatarStyle);
+  }
+
+  [Fact]
+  public async Task CreateAsync_AvatarStyleOmitted_StoresNull()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Jane",
+      LastName = "Doe",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "jdoe",
+      Password = "irrelevant-to-this-test",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: not defaulted to the first enum member
+    Assert.Null(result.AvatarStyle);
+  }
+
+  [Fact]
   public async Task UpdateAsync_PasswordOmitted_KeepsOriginalPasswordHash()
   {
     // Arrange

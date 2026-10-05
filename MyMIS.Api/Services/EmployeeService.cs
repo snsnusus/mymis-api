@@ -171,6 +171,7 @@ public class EmployeeService(AppDbContext context, HobbyService hobbyService, S3
       LastName = dto.LastName,
       Suffix = dto.Suffix,
       AvatarUrl = dto.AvatarUrl,
+      AvatarStyle = dto.AvatarStyle,
       Gender = dto.Gender,
       Birthdate = dto.Birthdate,
       MaritalStatus = dto.MaritalStatus,
