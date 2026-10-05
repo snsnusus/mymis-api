@@ -577,6 +577,68 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task CreateAsync_UsernameWithUppercaseAndWhitespace_StoresNormalized()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Jane",
+      LastName = "Doe",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "  JDoe  ",
+      Password = "irrelevant-to-this-test",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: normalized in the response AND in the database
+    Assert.Equal("jdoe", result.Username);
+
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == result.Id);
+    Assert.Equal("jdoe", saved.Username);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_UsernameWithUppercaseAndWhitespace_StoresNormalized()
+  {
+    // Arrange
+    var created = await _service.CreateAsync(new EmployeeCreateDto
+    {
+      FirstName = "Jane",
+      LastName = "Doe",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "jdoe",
+      Password = "irrelevant-to-this-test",
+    });
+
+    var updateDto = new EmployeeUpdateDto
+    {
+      FirstName = "Jane",
+      LastName = "Doe",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      EmployeeCode = "EMP-001",
+      Username = "  NewName  ", // <- the behavior under test
+    };
+
+    // Act
+    await _service.UpdateAsync(created.Id, updateDto);
+
+    // Assert
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == created.Id);
+    Assert.Equal("newname", saved.Username);
+  }
+
+  [Fact]
   public async Task UpdateAsync_PasswordOmitted_KeepsOriginalPasswordHash()
   {
     // Arrange

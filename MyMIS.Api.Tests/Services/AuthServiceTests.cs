@@ -5,6 +5,7 @@ using MyMIS.Api.DTOs;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
 using MyMIS.Api.Models;
+using MyMIS.Api.Helpers;
 
 namespace MyMIS.Api.Tests.Services;
 
@@ -112,6 +113,41 @@ public class AuthServiceTests : IDisposable
 
     var tokenCount = await _context.RefreshTokens.CountAsync();
     Assert.Equal(0, tokenCount);
+  }
+
+  [Fact]
+  public async Task LoginAsync_UsernameDifferentCaseAndWhitespace_ReturnsTokens()
+  {
+    // Arrange: seeded directly, already normalized
+    var employee = new Employee
+    {
+      FirstName = "John",
+      LastName = "Doe",
+      Username = "johndoe",
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      EmployeeCode = "EMP-001",
+      PasswordHash = BCrypt.Net.BCrypt.HashPassword("correct-password"),
+      Role = Role.User,
+    };
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    // Act: same username, different case and surrounding whitespace
+    var result = await _service.LoginAsync(new LoginDto
+    {
+      Username = "  JohnDoe  ",
+      Password = "correct-password",
+    });
+
+    // Assert
+    Assert.NotNull(result);
+    Assert.False(string.IsNullOrEmpty(result.AccessToken));
+    Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+    var savedToken = await _context.RefreshTokens
+      .FirstOrDefaultAsync(rt => rt.EmployeeId == employee.Id);
+    Assert.NotNull(savedToken);
   }
 
   [Fact]
