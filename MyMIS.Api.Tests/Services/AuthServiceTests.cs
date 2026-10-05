@@ -150,6 +150,22 @@ public class AuthServiceTests : IDisposable
     Assert.NotNull(savedToken);
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task LoginAsync_ValidCredentials_ReportsMustChangePassword(bool mustChangePassword)
+  {
+    // Arrange
+    await SeedEmployeeAsync("johndoe", "correct-password", mustChangePassword);
+
+    // Act
+    var result = await _service.LoginAsync(new LoginDto { Username = "johndoe", Password = "correct-password" });
+
+    // Assert
+    Assert.NotNull(result);
+    Assert.Equal(mustChangePassword, result.MustChangePassword);
+  }
+
   [Fact]
   public async Task RefreshAsync_NoRefreshTokenExists_ReturnsNull()
   {
@@ -356,6 +372,22 @@ public class AuthServiceTests : IDisposable
 
     var totalTokenCount = await _context.RefreshTokens.CountAsync(rt => rt.EmployeeId == employee.Id);
     Assert.Equal(2, totalTokenCount); // old (now revoked) + new
+  }
+
+  [Fact]
+  public async Task RefreshAsync_EmployeeMustChangePassword_ReportsTrue()
+  {
+    // Arrange
+    await SeedEmployeeAsync("johndoe", "correct-password", mustChangePassword: true);
+    var login = await _service.LoginAsync(new LoginDto { Username = "johndoe", Password = "correct-password" });
+    Assert.NotNull(login);
+
+    // Act
+    var refreshed = await _service.RefreshAsync(new RefreshRequestDto { RefreshToken = login.RefreshToken });
+
+    // Assert
+    Assert.NotNull(refreshed);
+    Assert.True(refreshed.MustChangePassword);
   }
 
   [Fact]
@@ -573,5 +605,43 @@ public class AuthServiceTests : IDisposable
     // Assert
     var updatedRefreshTokens = await _context.RefreshTokens.Where(rt => rt.EmployeeId == employee.Id).ToListAsync();
     Assert.All(updatedRefreshTokens, rt => Assert.NotNull(rt.RevokedAt));
+  }
+
+  [Fact]
+  public async Task ChangePasswordAsync_ValidCurrentPassword_ClearsMustChangePassword()
+  {
+    // Arrange
+    var employee = await SeedEmployeeAsync("johndoe", "temp-password", mustChangePassword: true);
+
+    // Act
+    var changed = await _service.ChangePasswordAsync(employee.Id, new ChangePasswordDto
+    {
+      CurrentPassword = "temp-password",
+      NewPassword = "my-own-password",
+    });
+
+    // Assert
+    Assert.True(changed);
+    var saved = await _context.Employees.AsNoTracking().FirstAsync(e => e.Id == employee.Id);
+    Assert.False(saved.MustChangePassword);
+  }
+
+  private async Task<Employee> SeedEmployeeAsync(string username, string password, bool mustChangePassword)
+  {
+    var employee = new Employee
+    {
+      FirstName = "Test",
+      LastName = "User",
+      Username = username,
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      EmployeeCode = $"EMP-{username}",
+      PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+      Role = Role.User,
+      MustChangePassword = mustChangePassword,
+    };
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+    return employee;
   }
 }

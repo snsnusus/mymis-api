@@ -1096,6 +1096,83 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task CreateAsync_NewEmployee_SetsMustChangePassword()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    var saved = await _context.Employees.AsNoTracking().FirstAsync(e => e.Id == result.Id);
+    Assert.True(saved.MustChangePassword);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_PasswordProvided_SetsMustChangePassword()
+  {
+    // Arrange: an employee who already changed their password
+    var employee = NewEmployee("Juan", "Cruz", "EMP-001");
+    employee.MustChangePassword = false;
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var updateDto = new EmployeeUpdateDto
+    {
+      FirstName = "Juan",
+      LastName = "Cruz",
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      Username = employee.Username,
+      Password = "ResetByHr2026!",   // <- HR resets the password
+    };
+
+    // Act
+    await _service.UpdateAsync(employee.Id, updateDto);
+
+    // Assert
+    var saved = await _context.Employees.AsNoTracking().FirstAsync(e => e.Id == employee.Id);
+    Assert.True(saved.MustChangePassword);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_PasswordOmitted_LeavesMustChangePasswordUnchanged()
+  {
+    // Arrange: an employee who already changed their password
+    var employee = NewEmployee("Juan", "Cruz", "EMP-001");
+    employee.MustChangePassword = false;
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var updateDto = new EmployeeUpdateDto
+    {
+      FirstName = "Juan",
+      LastName = "Dela Cruz",   // an unrelated change
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      Username = employee.Username,
+      // Password omitted
+    };
+
+    // Act
+    await _service.UpdateAsync(employee.Id, updateDto);
+
+    // Assert
+    var saved = await _context.Employees.AsNoTracking().FirstAsync(e => e.Id == employee.Id);
+    Assert.False(saved.MustChangePassword);
+    Assert.Equal("Dela Cruz", saved.LastName);   // proves the update actually ran
+  }
+
+  [Fact]
   public async Task UpdateSelfAsync_NoPersonalDetailRowExists_CreatesOneWithoutThrowing()
   {
     // Arrange
