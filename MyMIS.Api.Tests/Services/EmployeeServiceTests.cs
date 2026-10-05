@@ -664,6 +664,32 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task CreateAsync_NewEmployee_UsesGeneratedEmployeeCode()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "irrelevant-to-this-test",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: the code comes from the generator, in the response and the database
+    Assert.Equal("MYMIS-TEST-00001", result.EmployeeCode);
+
+    var saved = await _context.Employees
+      .AsNoTracking()
+      .FirstAsync(e => e.Id == result.Id);
+    Assert.Equal("MYMIS-TEST-00001", saved.EmployeeCode);
+  }
+
+  [Fact]
   public async Task UpdateAsync_UsernameWithUppercaseAndWhitespace_StoresNormalized()
   {
     // Arrange
