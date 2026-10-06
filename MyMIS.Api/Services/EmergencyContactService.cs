@@ -214,15 +214,7 @@ public class EmergencyContactService(AppDbContext context)
     contact.Suffix = NullIfBlank(dto.Suffix);
     contact.Relationship = dto.Relationship!.Value;
     contact.Phone = phone;
-    contact.Address = dto.Address is null
-      ? null
-      : new Address
-      {
-        AddressLine1 = dto.Address.AddressLine1.Trim(),
-        AddressLine2 = NullIfBlank(dto.Address.AddressLine2),
-        BarangayId = dto.Address.BarangayId!.Value,
-        PostalCode = dto.Address.PostalCode.Trim(),
-      };
+    contact.Address = dto.Address is null ? null : AddressMapper.ToEntity(dto.Address);
   }
 
   // Builds a new, unsaved contact. Used by CreateAsync here and by
@@ -252,34 +244,7 @@ public class EmergencyContactService(AppDbContext context)
     Suffix = c.Suffix,
     Relationship = c.Relationship,
     Phone = PhoneFormatter.ToResponse(c.Phone),
-    Address = c.Address is null
-      ? null
-      : new AddressResponseDto
-      {
-        AddressLine1 = c.Address.AddressLine1,
-        AddressLine2 = c.Address.AddressLine2,
-        PostalCode = c.Address.PostalCode,
-        Barangay = new LocationRefDto
-        {
-          Id = c.Address.Barangay.Id,
-          Name = c.Address.Barangay.Name,
-        },
-        City = new LocationRefDto
-        {
-          Id = c.Address.Barangay.City.Id,
-          Name = c.Address.Barangay.City.Name,
-        },
-        Region = new LocationRefDto
-        {
-          Id = c.Address.Barangay.City.Region.Id,
-          Name = c.Address.Barangay.City.Region.Name,
-        },
-      },
+    Address = c.Address is null ? null : AddressMapper.ToResponse(c.Address),
     IsPrimary = c.IsPrimary,
   };
-
-  internal static object MapToResponse(EmergencyContact contact, int arg2)
-  {
-    throw new NotImplementedException();
-  }
 }
