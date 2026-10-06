@@ -26,6 +26,7 @@ public class EmergencyContactCreateDto
   [Required]
   public PhoneDto? Phone { get; set; }
 
+  [Required]
   public AddressDto? Address { get; set; }
 
   public bool IsPrimary { get; set; }
