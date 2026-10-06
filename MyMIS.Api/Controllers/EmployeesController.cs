@@ -13,10 +13,16 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EmployeesController(EmployeeService employeeService, EmergencyContactService emergencyContactService, IAuthorizationService authorizationService) : ControllerBase
+public class EmployeesController(
+  EmployeeService employeeService,
+  EmergencyContactService emergencyContactService,
+  EmployeeAddressService employeeAddressService,
+  IAuthorizationService authorizationService
+) : ControllerBase
 {
   private readonly EmployeeService _employeeService = employeeService;
   private readonly EmergencyContactService _emergencyContactService = emergencyContactService;
+  private readonly EmployeeAddressService _employeeAddressService = employeeAddressService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
 
   [Authorize]
@@ -76,6 +82,13 @@ public class EmployeesController(EmployeeService employeeService, EmergencyConta
     if (contactError is not null)
     {
       ModelState.AddModelError(nameof(dto.EmergencyContact), contactError);
+      return ValidationProblem(ModelState);
+    }
+
+    var addressError = await _employeeAddressService.ValidateForNewEmployeeAsync(dto.Addresses!);
+    if (addressError is not null)
+    {
+      ModelState.AddModelError(nameof(dto.Addresses), addressError);
       return ValidationProblem(ModelState);
     }
 

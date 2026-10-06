@@ -240,6 +240,14 @@ public class EmployeeService(
         EmergencyContactService.NewEntity(dto.EmergencyContact, contactPhone, isPrimary: true));
     }
 
+    if (dto.Addresses is { Count: > 0 })
+    {
+      foreach (var address in EmployeeAddressService.NewEntitiesForNewEmployee(dto.Addresses))
+      {
+        employee.Addresses.Add(address);
+      }
+    }
+
     _context.Employees.Add(employee);
     await SaveChangesCheckingUsernameAsync(); ;
 
