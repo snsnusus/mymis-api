@@ -73,5 +73,7 @@ public class Employee
 
   public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];
 
+  public ICollection<EmployeeAddress> Addresses { get; set; } = [];
+
   public DateTime? DeletedAt { get; set; }
 }

@@ -9,8 +9,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Barangay> Barangays => Set<Barangay>();
   public DbSet<City> Cities => Set<City>();
   public DbSet<Department> Departments => Set<Department>();
-  public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
   public DbSet<Employee> Employees => Set<Employee>();
+  public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
+  public DbSet<EmployeeAddress> EmployeeAddresses => Set<EmployeeAddress>();
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
@@ -81,6 +82,34 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .Property(e => e.EmploymentStatus)
       .HasConversion<string>()
       .HasMaxLength(20);
+    modelBuilder.Entity<EmployeeAddress>(entity =>
+      {
+        entity.HasOne<Employee>()
+          .WithMany(e => e.Addresses)
+          .HasForeignKey(a => a.EmployeeId)
+          .OnDelete(DeleteBehavior.Cascade);
+
+        entity.Property(a => a.Type)
+          .HasConversion<string>()
+          .HasMaxLength(20);
+
+        entity.OwnsOne(a => a.Address, address =>
+          {
+            address.HasOne(x => x.Barangay)
+              .WithMany()
+              .HasForeignKey(x => x.BarangayId)
+              .OnDelete(DeleteBehavior.Restrict);
+          });
+        entity.Navigation(a => a.Address).IsRequired();
+
+        entity.HasIndex(a => a.EmployeeId, "IX_EmployeeAddresses_EmployeeId");
+
+        entity.HasIndex(a => a.EmployeeId, "IX_EmployeeAddresses_EmployeeId_Primary")
+          .IsUnique()
+          .HasFilter("\"IsPrimary\" = true AND \"DeletedAt\" IS NULL");
+
+        entity.HasQueryFilter(a => a.DeletedAt == null);
+      });
 
     modelBuilder.Entity<RefreshToken>()
       .HasIndex(r => r.TokenHash)
