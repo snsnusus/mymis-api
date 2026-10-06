@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
+  public DbSet<EmployeePhone> EmployeePhones => Set<EmployeePhone>();
   public DbSet<HmoPlanCoverage> HmoPlanCoverages => Set<HmoPlanCoverage>();
   public DbSet<HmoPlan> HmoPlans => Set<HmoPlan>();
   public DbSet<HmoProvider> HmoProviders => Set<HmoProvider>();
@@ -82,6 +83,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .Property(e => e.EmploymentStatus)
       .HasConversion<string>()
       .HasMaxLength(20);
+
     modelBuilder.Entity<EmployeeAddress>(entity =>
       {
         entity.HasOne<Employee>()
@@ -110,6 +112,38 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         entity.HasQueryFilter(a => a.DeletedAt == null);
       });
+
+    modelBuilder.Entity<EmployeePhone>(entity =>
+    {
+      entity.HasOne<Employee>()
+        .WithMany(e => e.Phones)
+        .HasForeignKey(ep => ep.EmployeeId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.Property(ep => ep.LineType)
+        .HasConversion<string>()
+        .HasMaxLength(20);
+
+      entity.Property(ep => ep.Ownership)
+        .HasConversion<string>()
+        .HasMaxLength(20);
+
+      entity.OwnsOne(ep => ep.Phone, phone =>
+      {
+        phone.HasIndex(p => p.Number, "IX_EmployeePhones_Phone_Number_Mobile")
+          .IsUnique()
+          .HasFilter("\"LineType\" = 'Mobile' AND \"DeletedAt\" IS NULL");
+      });
+      entity.Navigation(ep => ep.Phone).IsRequired();
+
+      entity.HasIndex(ep => ep.EmployeeId, "IX_EmployeePhones_EmployeeId");
+
+      entity.HasIndex(ep => ep.EmployeeId, "IX_EmployeePhones_EmployeeId_Primary")
+        .IsUnique()
+        .HasFilter("\"IsPrimary\" = true AND \"DeletedAt\" IS NULL");
+
+      entity.HasQueryFilter(ep => ep.DeletedAt == null);
+    });
 
     modelBuilder.Entity<RefreshToken>()
       .HasIndex(r => r.TokenHash)
@@ -185,13 +219,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<EmergencyContact>(entity =>
       {
         entity.HasOne<Employee>()
-                .WithMany(e => e.EmergencyContacts)
-                .HasForeignKey(c => c.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+          .WithMany(e => e.EmergencyContacts)
+          .HasForeignKey(c => c.EmployeeId)
+          .OnDelete(DeleteBehavior.Cascade);
 
         entity.Property(c => c.Relationship)
-                .HasConversion<string>()
-                .HasMaxLength(20);
+          .HasConversion<string>()
+          .HasMaxLength(20);
 
         entity.OwnsOne(c => c.Phone);
         entity.Navigation(c => c.Phone).IsRequired();
@@ -199,9 +233,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         entity.OwnsOne(c => c.Address, address =>
           {
             address.HasOne(a => a.Barangay)
-                    .WithMany()
-                    .HasForeignKey(a => a.BarangayId)
-                    .OnDelete(DeleteBehavior.Restrict);
+              .WithMany()
+              .HasForeignKey(a => a.BarangayId)
+              .OnDelete(DeleteBehavior.Restrict);
           });
 
         entity.HasIndex(c => c.EmployeeId, "IX_EmergencyContacts_EmployeeId");

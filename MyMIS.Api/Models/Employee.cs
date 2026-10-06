@@ -45,8 +45,6 @@ public class Employee
 
   public required string EmployeeCode { get; set; } // was "employeeId" in your JSON
 
-  // Foreign key — nullable, since your real data shows some employees
-  // with no department assigned yet
   public int? DepartmentId { get; set; }
 
   public Department? Department { get; set; }
@@ -74,6 +72,8 @@ public class Employee
   public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];
 
   public ICollection<EmployeeAddress> Addresses { get; set; } = [];
+
+  public ICollection<EmployeePhone> Phones { get; set; } = [];
 
   public DateTime? DeletedAt { get; set; }
 }
