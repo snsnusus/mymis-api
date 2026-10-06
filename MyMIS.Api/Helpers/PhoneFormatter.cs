@@ -51,4 +51,17 @@ public static class PhoneFormatter
       Formatted = $"({dialCode}){international[dialCode.Length..]}",
     };
   }
+
+  public static PhoneLineType DetectLineType(Phone phone)
+  {
+    var parsed = Util.Parse(phone.Number, phone.CountryCode);
+    var numberType = Util.GetNumberType(parsed);
+
+    return numberType switch
+    {
+      PhoneNumberType.FIXED_LINE => PhoneLineType.Landline,
+      // when in doubt, treat it as mobile, so the uniqueness rule applies
+      _ => PhoneLineType.Mobile,
+    };
+  }
 }
