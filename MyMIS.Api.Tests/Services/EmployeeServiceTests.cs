@@ -8,7 +8,6 @@ using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
-using MyMIS.Api.Dtos;
 
 namespace MyMIS.Api.Tests.Services;
 

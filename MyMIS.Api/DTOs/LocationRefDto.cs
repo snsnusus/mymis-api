@@ -1,4 +1,4 @@
-namespace MyMIS.Api.Dtos;
+namespace MyMIS.Api.DTOs;
 
 // A minimal { id, name } reference to one level of the location chain.
 public class LocationRefDto

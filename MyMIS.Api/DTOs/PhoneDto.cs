@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MyMIS.Api.Dtos;
+namespace MyMIS.Api.DTOs;
 
 
 public class PhoneDto

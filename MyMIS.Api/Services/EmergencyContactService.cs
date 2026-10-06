@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Data;
-using MyMIS.Api.Dtos;
+using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
 

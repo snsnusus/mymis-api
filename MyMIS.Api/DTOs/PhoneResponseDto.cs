@@ -1,4 +1,4 @@
-namespace MyMIS.Api.Dtos;
+namespace MyMIS.Api.DTOs;
 
 public class PhoneResponseDto
 {

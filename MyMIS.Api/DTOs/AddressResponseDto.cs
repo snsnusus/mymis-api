@@ -1,4 +1,4 @@
-namespace MyMIS.Api.Dtos;
+namespace MyMIS.Api.DTOs;
 
 // Response shape: the full location chain, each level as { id, name }.
 public class AddressResponseDto

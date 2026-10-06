@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using MyMIS.Api.Models;
 
-namespace MyMIS.Api.Dtos;
+namespace MyMIS.Api.DTOs;
 
 // Used for POST and PUT, following EmergencyContactCreateDto.
 public class EmployeeAddressCreateDto

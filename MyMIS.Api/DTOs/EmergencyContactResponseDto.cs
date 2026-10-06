@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using MyMIS.Api.Models;
 
-namespace MyMIS.Api.Dtos;
+namespace MyMIS.Api.DTOs;
 
 public class EmergencyContactResponseDto
 {

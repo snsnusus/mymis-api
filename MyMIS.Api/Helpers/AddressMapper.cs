@@ -1,4 +1,4 @@
-using MyMIS.Api.Dtos;
+using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
 
 namespace MyMIS.Api.Helpers;
