@@ -629,6 +629,63 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task CreateAsync_WithTwoAddresses_SavesBothWithExactlyOnePrimary()
+  {
+    // Arrange
+    var barangay = await SeedBarangayAsync();
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      Addresses =
+      [
+        NewAddressDto(AddressType.Present, barangay.Id),
+        NewAddressDto(AddressType.Permanent, barangay.Id, isPrimary: true),
+      ],
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    var saved = await _context.EmployeeAddresses
+        .AsNoTracking()
+        .Where(a => a.EmployeeId == result.Id)
+        .ToListAsync();
+
+    Assert.Equal(2, saved.Count);
+    var primary = Assert.Single(saved, a => a.IsPrimary);
+    Assert.Equal(AddressType.Permanent, primary.Type);
+  }
+
+  [Fact]
+  public async Task CreateAsync_WithoutAddresses_StillCreatesEmployee()
+  {
+    // Arrange: the "at least one" rule lives in the DTO's validation, which
+    // only runs on HTTP requests; the service itself must not assume it.
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    Assert.True(result.Id > 0);
+    Assert.Empty(await _context.EmployeeAddresses.Where(a => a.EmployeeId == result.Id).ToListAsync());
+  }
+
+  [Fact]
   public async Task CreateAsync_PositionIdOmitted_CreatesEmployeeWithNullPosition()
   {
     // Arrange
@@ -2012,5 +2069,29 @@ public class EmployeeServiceTests : IDisposable
     Phone = new PhoneDto { CountryCode = "PH", Number = "+639171234567" },
     IsPrimary = isPrimary,
   };
+
+  private static EmployeeAddressCreateDto NewAddressDto(AddressType type, int barangayId, bool isPrimary = false) => new()
+  {
+    Type = type,
+    Address = new AddressDto
+    {
+      AddressLine1 = "123 Mabini St.",
+      BarangayId = barangayId,
+      PostalCode = "1105",
+    },
+    IsPrimary = isPrimary,
+  };
+
+  private async Task<Barangay> SeedBarangayAsync()
+  {
+    var barangay = new Barangay
+    {
+      Name = "Bagong Pag-asa",
+      City = new City { Name = "Quezon City", Region = new Region { Name = "NCR" } },
+    };
+    _context.Barangays.Add(barangay);
+    await _context.SaveChangesAsync();
+    return barangay;
+  }
 }
 
