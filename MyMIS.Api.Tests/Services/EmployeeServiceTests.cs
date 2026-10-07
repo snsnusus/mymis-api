@@ -662,6 +662,64 @@ public class EmployeeServiceTests : IDisposable
   }
 
   [Fact]
+  public async Task CreateAsync_WithMobileAndLandline_SavesBothWithExactlyOnePrimary()
+  {
+    // Arrange: the landline (second) is the one marked primary
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      Phones =
+      [
+        NewPhoneDto("+639171234567"),
+        NewPhoneDto("+63281234567", isPrimary: true),
+      ],
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: both saved through the employee.Phones navigation (EF filled in
+    // EmployeeId), line types detected, and only the landline is primary
+    var saved = await _context.EmployeePhones
+        .AsNoTracking()
+        .Where(p => p.EmployeeId == result.Id)
+        .ToListAsync();
+
+    Assert.Equal(2, saved.Count);
+    var primary = Assert.Single(saved, p => p.IsPrimary);
+    Assert.Equal(PhoneLineType.Landline, primary.LineType);
+    Assert.Contains(saved, p => p.LineType == PhoneLineType.Mobile && !p.IsPrimary);
+  }
+
+  [Fact]
+  public async Task CreateAsync_WithoutPhones_StillCreatesEmployee()
+  {
+    // Arrange: like addresses, the "at least one phone" rule lives in the DTO
+    // and controller, so the service itself must not assume phones are present.
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    Assert.True(result.Id > 0);
+    Assert.Empty(await _context.EmployeePhones.Where(p => p.EmployeeId == result.Id).ToListAsync());
+  }
+
+  [Fact]
   public async Task CreateAsync_WithoutAddresses_StillCreatesEmployee()
   {
     // Arrange: the "at least one" rule lives in the DTO's validation, which
@@ -2078,6 +2136,13 @@ public class EmployeeServiceTests : IDisposable
       BarangayId = barangayId,
       PostalCode = "1105",
     },
+    IsPrimary = isPrimary,
+  };
+
+  private static EmployeePhoneCreateDto NewPhoneDto(string number, bool isPrimary = false) => new()
+  {
+    Ownership = PhoneOwnership.Personal,
+    Phone = new PhoneDto { CountryCode = "PH", Number = number },
     IsPrimary = isPrimary,
   };
 
