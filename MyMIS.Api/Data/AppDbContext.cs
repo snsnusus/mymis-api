@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
   public DbSet<EmployeePhone> EmployeePhones => Set<EmployeePhone>();
+  public DbSet<EmployeeEmail> EmployeeEmails => Set<EmployeeEmail>();
   public DbSet<HmoPlanCoverage> HmoPlanCoverages => Set<HmoPlanCoverage>();
   public DbSet<HmoPlan> HmoPlans => Set<HmoPlan>();
   public DbSet<HmoProvider> HmoProviders => Set<HmoProvider>();
@@ -143,6 +144,34 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         .HasFilter("\"IsPrimary\" = true AND \"DeletedAt\" IS NULL");
 
       entity.HasQueryFilter(ep => ep.DeletedAt == null);
+    });
+
+    modelBuilder.Entity<EmployeeEmail>(entity =>
+    {
+      entity.HasOne<Employee>()
+        .WithMany(e => e.Emails)
+        .HasForeignKey(ee => ee.EmployeeId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.Property(ee => ee.Ownership)
+        .HasConversion<string>()
+        .HasMaxLength(20);
+
+      entity.Property(ee => ee.Email)
+        .IsRequired()
+        .HasMaxLength(254);
+
+      entity.HasIndex(ee => ee.EmployeeId, "IX_EmployeeEmails_EmployeeId");
+
+      entity.HasIndex(ee => ee.EmployeeId, "IX_EmployeeEmails_EmployeeId_Primary")
+        .IsUnique()
+        .HasFilter("\"IsPrimary\" = true AND \"DeletedAt\" IS NULL");
+
+      entity.HasIndex(ee => ee.Email, "IX_EmployeeEmails_Email")
+        .IsUnique()
+        .HasFilter("\"DeletedAt\" IS NULL");
+
+      entity.HasQueryFilter(ee => ee.DeletedAt == null);
     });
 
     modelBuilder.Entity<RefreshToken>()

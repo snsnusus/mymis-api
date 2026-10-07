@@ -75,5 +75,7 @@ public class Employee
 
   public ICollection<EmployeePhone> Phones { get; set; } = [];
 
+  public ICollection<EmployeeEmail> Emails { get; set; } = [];
+
   public DateTime? DeletedAt { get; set; }
 }
