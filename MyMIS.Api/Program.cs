@@ -35,6 +35,7 @@ builder.Services.AddScoped<CityService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmergencyContactService>();
 builder.Services.AddScoped<EmployeeAddressService>();
+builder.Services.AddScoped<EmployeePhoneService>();
 builder.Services.AddScoped<EmployeeService>();
 builder.Services.AddScoped<HmoPlanService>();
 builder.Services.AddScoped<HmoProviderService>();
