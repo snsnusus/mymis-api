@@ -248,6 +248,14 @@ public class EmployeeService(
       }
     }
 
+    if (dto.Phones is { Count: > 0 })
+    {
+      foreach (var phone in EmployeePhoneService.NewEntitiesForNewEmployee(dto.Phones))
+      {
+        employee.Phones.Add(phone);
+      }
+    }
+
     _context.Employees.Add(employee);
     await SaveChangesCheckingUsernameAsync(); ;
 

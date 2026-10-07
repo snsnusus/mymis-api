@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Exceptions;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
 using MyMIS.Api.Validation;
 using System.ComponentModel.DataAnnotations;
@@ -17,12 +18,14 @@ public class EmployeesController(
   EmployeeService employeeService,
   EmergencyContactService emergencyContactService,
   EmployeeAddressService employeeAddressService,
+  EmployeePhoneService employeePhoneService,
   IAuthorizationService authorizationService
 ) : ControllerBase
 {
   private readonly EmployeeService _employeeService = employeeService;
   private readonly EmergencyContactService _emergencyContactService = emergencyContactService;
   private readonly EmployeeAddressService _employeeAddressService = employeeAddressService;
+  private readonly EmployeePhoneService _employeePhoneService = employeePhoneService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
 
   [Authorize]
@@ -90,6 +93,18 @@ public class EmployeesController(
     {
       ModelState.AddModelError(nameof(dto.Addresses), addressError);
       return ValidationProblem(ModelState);
+    }
+
+    var phoneCheck = await _employeePhoneService.ValidateForNewEmployeeAsync(dto.Phones!);
+    if (phoneCheck.ErrorType == ServiceErrorType.Validation)
+    {
+      ModelState.AddModelError(nameof(dto.Phones), phoneCheck.ErrorMessage!);
+      return ValidationProblem(ModelState);
+    }
+
+    if (phoneCheck.ErrorType == ServiceErrorType.Conflict)
+    {
+      return PhonesConflict(phoneCheck.ErrorMessage!);
     }
 
     if (!await _employeeService.IsUsernameAvailableAsync(dto.Username))
@@ -355,6 +370,21 @@ public class EmployeesController(
     {
       Status = StatusCodes.Status409Conflict,
       Title = "Username already taken.",
+    };
+
+    return Conflict(problem);
+  }
+
+  // 409 in validation-error shape so the portal can show it under the Phones section.
+  private ConflictObjectResult PhonesConflict(string message)
+  {
+    var problem = new ValidationProblemDetails(new Dictionary<string, string[]>
+    {
+      ["Phones"] = [message],
+    })
+    {
+      Status = StatusCodes.Status409Conflict,
+      Title = "Phone number already in use.",
     };
 
     return Conflict(problem);
