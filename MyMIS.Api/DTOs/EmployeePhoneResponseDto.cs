@@ -8,7 +8,7 @@ public class EmployeePhoneResponseDto
   public int Id { get; set; }
 
   [JsonConverter(typeof(JsonStringEnumConverter))]
-  public PhoneOwnership Ownership { get; set; }
+  public ContactOwnership Ownership { get; set; }
 
   [JsonConverter(typeof(JsonStringEnumConverter))]
   public PhoneLineType LineType { get; set; }

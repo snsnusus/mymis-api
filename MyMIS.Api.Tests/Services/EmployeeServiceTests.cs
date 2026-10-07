@@ -2141,7 +2141,7 @@ public class EmployeeServiceTests : IDisposable
 
   private static EmployeePhoneCreateDto NewPhoneDto(string number, bool isPrimary = false) => new()
   {
-    Ownership = PhoneOwnership.Personal,
+    Ownership = ContactOwnership.Personal,
     Phone = new PhoneDto { CountryCode = "PH", Number = number },
     IsPrimary = isPrimary,
   };

@@ -11,7 +11,7 @@ public class EmployeePhoneCreateDtoTests
 {
   private static EmployeePhoneCreateDto ValidDto() => new()
   {
-    Ownership = PhoneOwnership.Personal,
+    Ownership = ContactOwnership.Personal,
     Phone = new PhoneDto { CountryCode = "PH", Number = "+639171234567" },
   };
 
@@ -32,7 +32,7 @@ public class EmployeePhoneCreateDtoTests
   public void Validate_MissingOwnership_ReportsOwnershipRequired()
   {
     // Arrange: null is what a JSON body without "ownership" binds to.
-    // This is why Ownership is PhoneOwnership? and not PhoneOwnership: a
+    // This is why Ownership is ContactOwnership? and not ContactOwnership: a
     // non-nullable enum would silently default to Corporate and pass.
     var dto = ValidDto();
     dto.Ownership = null;

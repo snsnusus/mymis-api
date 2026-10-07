@@ -192,7 +192,7 @@ public class EmployeePhoneService(AppDbContext context)
     _context.EmployeePhones.AsNoTracking()
       .Where(ep => ep.EmployeeId == employeeId);
 
-  public static EmployeePhone NewEntity(PhoneOwnership ownership, Phone phone, PhoneLineType type, bool isPrimary)
+  public static EmployeePhone NewEntity(ContactOwnership ownership, Phone phone, PhoneLineType type, bool isPrimary)
   {
     var now = DateTime.UtcNow;
     var employeePhone = new EmployeePhone

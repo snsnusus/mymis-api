@@ -6,7 +6,7 @@ public class EmployeePhone
 
   public int EmployeeId { get; set; }
 
-  public PhoneOwnership Ownership { get; set; }
+  public ContactOwnership Ownership { get; set; }
 
   public PhoneLineType LineType { get; set; }
 

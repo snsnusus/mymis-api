@@ -7,9 +7,9 @@ namespace MyMIS.Api.DTOs;
 public class EmployeePhoneCreateDto
 {
   [Required]
-  [EnumDataType(typeof(PhoneOwnership))]
+  [EnumDataType(typeof(ContactOwnership))]
   [JsonConverter(typeof(JsonStringEnumConverter))]
-  public PhoneOwnership? Ownership { get; set; }
+  public ContactOwnership? Ownership { get; set; }
 
   [Required]
   public PhoneDto? Phone { get; set; }

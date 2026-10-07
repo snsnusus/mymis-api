@@ -1,6 +1,6 @@
 namespace MyMIS.Api.Models;
 
-public enum PhoneOwnership
+public enum ContactOwnership
 {
   Corporate,
   Personal,

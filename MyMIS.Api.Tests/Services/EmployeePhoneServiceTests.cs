@@ -45,7 +45,7 @@ public class EmployeePhoneServiceTests : IDisposable
   private static EmployeePhoneCreateDto NewDto(
       string number = "+639171234567",
       string countryCode = "PH",
-      PhoneOwnership ownership = PhoneOwnership.Personal,
+      ContactOwnership ownership = ContactOwnership.Personal,
       bool isPrimary = false
     ) => new()
     {
@@ -64,7 +64,7 @@ public class EmployeePhoneServiceTests : IDisposable
     bool isPrimary,
     DateTime createdAt,
     PhoneLineType lineType = PhoneLineType.Mobile,
-    PhoneOwnership ownership = PhoneOwnership.Personal,
+    ContactOwnership ownership = ContactOwnership.Personal,
     string countryCode = "PH")
   {
     var phone = new EmployeePhone
@@ -256,11 +256,11 @@ public class EmployeePhoneServiceTests : IDisposable
     // and wrongly report the number as taken.
     var result = await _service.UpdateAsync(
         _juan.Id, phone.Id,
-        NewDto(number: "+639171234567", ownership: PhoneOwnership.Corporate, isPrimary: true));
+        NewDto(number: "+639171234567", ownership: ContactOwnership.Corporate, isPrimary: true));
 
     // Assert
     Assert.True(result.IsSuccess);
-    Assert.Equal(PhoneOwnership.Corporate, result.Value!.Ownership);
+    Assert.Equal(ContactOwnership.Corporate, result.Value!.Ownership);
   }
 
   [Fact]
