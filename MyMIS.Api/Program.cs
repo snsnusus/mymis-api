@@ -11,6 +11,7 @@ using MyMIS.Api.Data;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
 using Scalar.AspNetCore;
+using MyMIS.Api.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,7 +26,10 @@ var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
 
 builder.Services.AddControllers();
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+  options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -130,7 +134,9 @@ var app = builder.Build();
 if (app.Configuration.GetValue<bool>("Features:EnableApiDocs"))
 {
   app.MapOpenApi();
-  app.MapScalarApiReference();
+  app.MapScalarApiReference(options => options
+    .AddPreferredSecuritySchemes("Bearer")
+    .EnablePersistentAuthentication());
 }
 
 app.UseForwardedHeaders();
