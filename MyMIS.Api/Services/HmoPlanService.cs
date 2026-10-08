@@ -56,11 +56,12 @@ public class HmoPlanService(AppDbContext context)
 
   public async Task<bool> NameExistsAsync(int providerId, string name, int? excludeId = null)
   {
-    var normalized = name.Trim().ToLowerInvariant();
+    var normalized = HmoPlanMapping.NormalizeName(name);
 
     return await _context.HmoPlans.AnyAsync(p =>
         p.HmoProviderId == providerId &&
-#pragma warning disable CA1862 // EF Core can't translate StringComparison overloads to SQL; ToLower() becomes lower()
+        // EF Core can't translate StringComparison overloads to SQL; ToLower() becomes lower()
+#pragma warning disable CA1862
         p.Name.ToLower() == normalized &&
 #pragma warning restore CA1862
         (excludeId == null || p.Id != excludeId));

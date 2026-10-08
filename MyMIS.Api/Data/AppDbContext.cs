@@ -279,7 +279,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<HmoProvider>(entity =>
       {
         entity.HasIndex(p => p.Code).IsUnique();
-        entity.HasIndex(p => p.Name).IsUnique();
+        entity.HasIndex(p => p.NormalizedName).IsUnique();
       });
 
     modelBuilder.Entity<HmoPlan>(entity =>
@@ -289,7 +289,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
               .HasForeignKey(p => p.HmoProviderId)
               .OnDelete(DeleteBehavior.Restrict);
 
-        entity.HasIndex(p => new { p.HmoProviderId, p.Name }).IsUnique();
+        entity.HasIndex(p => new { p.HmoProviderId, p.NormalizedName }).IsUnique();
 
         entity.Property(p => p.Tier).HasConversion<string>().HasMaxLength(20);
         entity.Property(p => p.RoomType).HasConversion<string>().HasMaxLength(20);

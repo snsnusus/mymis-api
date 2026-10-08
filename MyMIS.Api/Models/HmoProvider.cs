@@ -12,6 +12,10 @@ public class HmoProvider
   [Required, MaxLength(150)]
   public string Name { get; set; } = string.Empty;
 
+  // Trimmed, uppercased copy of Name; used only for case-insensitive uniqueness, never shown to users.
+  [Required, MaxLength(150)]
+  public string NormalizedName { get; set; } = string.Empty;
+
   [MaxLength(150)]
   public string? AccountManagerName { get; set; }
 

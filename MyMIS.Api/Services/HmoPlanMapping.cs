@@ -5,9 +5,12 @@ namespace MyMIS.Api.Services;
 
 internal static class HmoPlanMapping
 {
+  public static string NormalizeName(string name) =>
+    name.Trim().ToUpperInvariant();
   public static void ApplyDto(HmoPlan plan, HmoPlanFieldsDto dto)
   {
     plan.Name = dto.Name.Trim();
+    plan.NormalizedName = NormalizeName(dto.Name);
     plan.Tier = dto.Tier!.Value;
     plan.RoomType = dto.RoomType!.Value;
     plan.MaximumBenefitLimit = dto.MaximumBenefitLimit!.Value;

@@ -13,6 +13,11 @@ public class HmoPlan
   [Required, MaxLength(150)]
   public string Name { get; set; } = string.Empty;
 
+  // Trimmed, uppercased copy of Name (e.g. "GOLD PLUS").
+  // Used only for case-insensitive uniqueness per provider; never shown to users.
+  [Required, MaxLength(150)]
+  public string NormalizedName { get; set; } = string.Empty;
+
   public HmoPlanTier Tier { get; set; }
 
   public HmoRoomType RoomType { get; set; }
