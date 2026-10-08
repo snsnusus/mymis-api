@@ -242,7 +242,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .IsUnique();
 
     modelBuilder.Entity<Office>()
-      .HasIndex(o => o.Name)
+      .HasIndex(o => o.NormalizedName)
       .IsUnique();
 
     modelBuilder.Entity<EmergencyContact>(entity =>

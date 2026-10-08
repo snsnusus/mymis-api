@@ -9,6 +9,28 @@ public class OfficeService(AppDbContext context)
 {
   private readonly AppDbContext _context = context;
 
+  private static string NormalizeName(string name) =>
+    name.Trim().ToUpperInvariant();
+
+  private static void ApplyDto(Office office, OfficeCreateDto dto)
+  {
+    office.Name = dto.Name.Trim();
+    office.NormalizedName = NormalizeName(dto.Name);
+    office.City = dto.City.Trim();
+    office.CountryCode = dto.CountryCode.Trim().ToUpperInvariant();
+    office.Address = string.IsNullOrWhiteSpace(dto.Address) ? null : dto.Address.Trim();
+  }
+
+  public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
+  {
+    var normalized = NormalizeName(name);
+
+    return await _context.Offices
+      .AnyAsync(o =>
+        o.NormalizedName == normalized &&
+        (excludeId == null || o.Id != excludeId));
+  }
+
   public async Task<List<OfficeResponseDto>> GetAllAsync()
   {
     return await _context.Offices
@@ -37,16 +59,6 @@ public class OfficeService(AppDbContext context)
         Address = o.Address
       })
       .FirstOrDefaultAsync();
-  }
-
-  public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
-  {
-    var trimmed = name.Trim();
-
-    return await _context.Offices
-      .AnyAsync(o =>
-        o.Name.ToLower() == trimmed.ToLower() &&
-        (excludeId == null || o.Id != excludeId));
   }
 
   public async Task<OfficeResponseDto> CreateAsync(OfficeCreateDto dto)
@@ -82,11 +94,5 @@ public class OfficeService(AppDbContext context)
     return true;
   }
 
-  private static void ApplyDto(Office office, OfficeCreateDto dto)
-  {
-    office.Name = dto.Name.Trim();
-    office.City = dto.City.Trim();
-    office.CountryCode = dto.CountryCode.Trim().ToUpperInvariant();
-    office.Address = string.IsNullOrWhiteSpace(dto.Address) ? null : dto.Address.Trim();
-  }
+
 }
