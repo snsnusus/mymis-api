@@ -18,6 +18,7 @@ public class EmployeesController(
   EmployeeService employeeService,
   EmergencyContactService emergencyContactService,
   EmployeeAddressService employeeAddressService,
+  EmployeeEmailService employeeEmailService,
   EmployeePhoneService employeePhoneService,
   IAuthorizationService authorizationService
 ) : ControllerBase
@@ -25,6 +26,7 @@ public class EmployeesController(
   private readonly EmployeeService _employeeService = employeeService;
   private readonly EmergencyContactService _emergencyContactService = emergencyContactService;
   private readonly EmployeeAddressService _employeeAddressService = employeeAddressService;
+  private readonly EmployeeEmailService _employeeEmailService = employeeEmailService;
   private readonly EmployeePhoneService _employeePhoneService = employeePhoneService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
 
@@ -93,6 +95,18 @@ public class EmployeesController(
     {
       ModelState.AddModelError(nameof(dto.Addresses), addressError);
       return ValidationProblem(ModelState);
+    }
+
+    var emailCheck = await _employeeEmailService.ValidateForNewEmployeeAsync(dto.Emails!);
+    if (emailCheck.ErrorType == ServiceErrorType.Validation)
+    {
+      ModelState.AddModelError(nameof(dto.Emails), emailCheck.ErrorMessage!);
+      return ValidationProblem(ModelState);
+    }
+
+    if (emailCheck.ErrorType == ServiceErrorType.Conflict)
+    {
+      return EmailsConflict(emailCheck.ErrorMessage!);
     }
 
     var phoneCheck = await _employeePhoneService.ValidateForNewEmployeeAsync(dto.Phones!);
@@ -375,6 +389,20 @@ public class EmployeesController(
     return Conflict(problem);
   }
 
+  private ConflictObjectResult EmailsConflict(string message)
+  {
+    var problem = new ValidationProblemDetails(new Dictionary<string, string[]>
+    {
+      ["Emails"] = [message],
+    })
+    {
+      Status = StatusCodes.Status409Conflict,
+      Title = "Email address is already in use.",
+    };
+
+    return Conflict(problem);
+  }
+
   // 409 in validation-error shape so the portal can show it under the Phones section.
   private ConflictObjectResult PhonesConflict(string message)
   {
@@ -384,7 +412,7 @@ public class EmployeesController(
     })
     {
       Status = StatusCodes.Status409Conflict,
-      Title = "Phone number already in use.",
+      Title = "Phone number is already in use.",
     };
 
     return Conflict(problem);

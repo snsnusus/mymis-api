@@ -248,6 +248,14 @@ public class EmployeeService(
       }
     }
 
+    if (dto.Emails is { Count: > 0 })
+    {
+      foreach (var email in EmployeeEmailService.NewEntitiesForNewEmployee(dto.Emails))
+      {
+        employee.Emails.Add(email);
+      }
+    }
+
     if (dto.Phones is { Count: > 0 })
     {
       foreach (var phone in EmployeePhoneService.NewEntitiesForNewEmployee(dto.Phones))
@@ -257,7 +265,7 @@ public class EmployeeService(
     }
 
     _context.Employees.Add(employee);
-    await SaveChangesCheckingUsernameAsync(); ;
+    await SaveChangesCheckingUsernameAsync();
 
     return (await GetByIdAsync(employee.Id, includeEmergencyContacts: true))!
         ?? throw new InvalidOperationException("Failed to reload newly created employee.");
