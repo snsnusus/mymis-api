@@ -9,14 +9,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Barangay> Barangays => Set<Barangay>();
   public DbSet<City> Cities => Set<City>();
   public DbSet<Department> Departments => Set<Department>();
-  public DbSet<Employee> Employees => Set<Employee>();
   public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
-  public DbSet<EmployeeAddress> EmployeeAddresses => Set<EmployeeAddress>();
-  public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
+  public DbSet<Employee> Employees => Set<Employee>();
   public DbSet<EmployeePermission> EmployeePermissions { get; set; }
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
-  public DbSet<EmployeePhone> EmployeePhones => Set<EmployeePhone>();
+  public DbSet<EmployeeAddress> EmployeeAddresses => Set<EmployeeAddress>();
   public DbSet<EmployeeEmail> EmployeeEmails => Set<EmployeeEmail>();
+  public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
+  public DbSet<EmployeePhone> EmployeePhones => Set<EmployeePhone>();
   public DbSet<HmoPlanCoverage> HmoPlanCoverages => Set<HmoPlanCoverage>();
   public DbSet<HmoPlan> HmoPlans => Set<HmoPlan>();
   public DbSet<HmoProvider> HmoProviders => Set<HmoProvider>();
