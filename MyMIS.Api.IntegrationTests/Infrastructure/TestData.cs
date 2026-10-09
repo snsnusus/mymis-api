@@ -67,4 +67,24 @@ public static class TestData
       await db.SaveChangesAsync();
       return barangay;
     });
+
+  // An emergency contact whose address uses the given barangay, so that barangay is "in use".
+  public static Task SeedEmergencyContactInBarangayAsync(this ApiFactory factory, Employee employee, Barangay barangay) =>
+    factory.ExecuteDbAsync(async db =>
+    {
+      db.EmergencyContacts.Add(new EmergencyContact
+      {
+        EmployeeId = employee.Id,
+        FirstName = "Ana",
+        LastName = "Santos",
+        Relationship = EmergencyContactRelationship.Parent,
+        Phone = new Phone { CountryCode = "PH", Number = "+639171234567" },
+        Address = new Address { AddressLine1 = "123 Mabini St.", BarangayId = barangay.Id, PostalCode = "1105" },
+        IsPrimary = true,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+      });
+
+      await db.SaveChangesAsync();
+    });
 }

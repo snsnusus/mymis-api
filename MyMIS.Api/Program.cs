@@ -29,6 +29,7 @@ builder.Services.AddControllers(options =>
 {
   // Turns unique-index violations from any controller action into a 409 (see Helpers/UniqueConstraints.cs).
   options.Filters.Add<UniqueViolationExceptionFilter>();
+  options.Filters.Add<ForeignKeyViolationExceptionFilter>();
 });
 
 builder.Services.AddOpenApi(options =>
