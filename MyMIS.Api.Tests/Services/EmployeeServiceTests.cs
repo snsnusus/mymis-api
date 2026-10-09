@@ -2157,5 +2157,105 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
     return barangay;
   }
+
+  private static EmployeeEmailCreateDto NewEmailDto(
+  string email,
+  ContactOwnership ownership = ContactOwnership.Personal,
+  bool isPrimary = false) => new()
+  {
+    Ownership = ownership,
+    Email = email,
+    IsPrimary = isPrimary,
+  };
+
+  [Fact]
+  public async Task CreateAsync_WithEmailsNoneMarkedPrimary_SavesBothNormalizedWithFirstPrimary()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      Emails =
+      [
+        NewEmailDto("  Maria@Example.com "),
+      NewEmailDto("maria.work@example.com"),
+    ],
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert: both saved through the employee.Emails navigation, lowercased,
+    // and only the first one is primary
+    var saved = await _context.EmployeeEmails
+        .AsNoTracking()
+        .Where(e => e.EmployeeId == result.Id)
+        .ToListAsync();
+
+    Assert.Equal(2, saved.Count);
+    var primary = Assert.Single(saved, e => e.IsPrimary);
+    Assert.Equal("maria@example.com", primary.Email);
+    Assert.Contains(saved, e => e.Email == "maria.work@example.com" && !e.IsPrimary);
+  }
+
+  [Fact]
+  public async Task CreateAsync_WithSecondEmailMarkedPrimary_OnlyTheSecondIsPrimary()
+  {
+    // Arrange
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+      Emails =
+      [
+        NewEmailDto("maria@example.com"),
+      NewEmailDto("maria.work@example.com", isPrimary: true),
+    ],
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    var saved = await _context.EmployeeEmails
+        .AsNoTracking()
+        .Where(e => e.EmployeeId == result.Id)
+        .ToListAsync();
+
+    var primary = Assert.Single(saved, e => e.IsPrimary);
+    Assert.Equal("maria.work@example.com", primary.Email);
+  }
+
+  [Fact]
+  public async Task CreateAsync_WithoutEmails_StillCreatesEmployee()
+  {
+    // Arrange: the "at least one email" rule lives in the DTO and controller,
+    // so the service itself must not assume emails are present.
+    var dto = new EmployeeCreateDto
+    {
+      FirstName = "Maria",
+      LastName = "Reyes",
+      Gender = "Female",
+      MaritalStatus = "Single",
+      Username = "mreyes",
+      Password = "TempPass2026!",
+    };
+
+    // Act
+    var result = await _service.CreateAsync(dto);
+
+    // Assert
+    Assert.True(result.Id > 0);
+    Assert.Empty(await _context.EmployeeEmails.Where(e => e.EmployeeId == result.Id).ToListAsync());
+  }
 }
 

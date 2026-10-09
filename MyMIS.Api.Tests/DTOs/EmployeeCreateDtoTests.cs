@@ -46,4 +46,32 @@ public class EmployeeCreateDtoTests
     // Assert
     Assert.Contains(results, r => r.MemberNames.Contains(nameof(EmployeeCreateDto.Phones)));
   }
+
+  [Fact]
+  public void Validate_EmptyEmailList_ReportsEmailsError()
+  {
+    // Arrange: [] passes [Required] (it isn't null) but fails [MinLength(1)]
+    var dto = new EmployeeCreateDto { Emails = [] };
+    var results = new List<ValidationResult>();
+
+    // Act
+    Validator.TryValidateObject(dto, new ValidationContext(dto), results, validateAllProperties: true);
+
+    // Assert
+    Assert.Contains(results, r => r.MemberNames.Contains(nameof(EmployeeCreateDto.Emails)));
+  }
+
+  [Fact]
+  public void Validate_MissingEmails_ReportsEmailsError()
+  {
+    // Arrange: Emails left null, i.e. the client omitted it entirely
+    var dto = new EmployeeCreateDto();
+    var results = new List<ValidationResult>();
+
+    // Act
+    Validator.TryValidateObject(dto, new ValidationContext(dto), results, validateAllProperties: true);
+
+    // Assert
+    Assert.Contains(results, r => r.MemberNames.Contains(nameof(EmployeeCreateDto.Emails)));
+  }
 }
