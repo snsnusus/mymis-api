@@ -162,4 +162,20 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     var key = $"{role}|{string.Join(",", permissions.Order())}";
     return _clients.GetOrAdd(key, _ => CreateAuthorizedClientAsync(role, permissions));
   }
+
+  // Runs code against the database in a fresh scope, which means a fresh AppDbContext.
+  // A context that just failed a SaveChanges is in a bad state, so every attempt gets a new one.
+  public async Task ExecuteDbAsync(Func<AppDbContext, Task> action)
+  {
+    using var scope = Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await action(db);
+  }
+
+  public async Task<T> QueryDbAsync<T>(Func<AppDbContext, Task<T>> query)
+  {
+    using var scope = Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    return await query(db);
+  }
 }
