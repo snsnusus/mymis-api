@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Amazon.S3;
@@ -149,5 +150,16 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     var client = CreateApiClient();
     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     return client;
+  }
+
+  private readonly ConcurrentDictionary<string, Task<HttpClient>> _clients = new();
+
+  // Logging in costs a deliberately slow BCrypt hash plus a BCrypt check, so tests that send many
+  // requests as the same kind of user share one logged-in client instead of creating a new one each time.
+  // (Access tokens last 15 minutes, which is longer than a test run.)
+  public Task<HttpClient> GetClientAsync(Role role = Role.User, params string[] permissions)
+  {
+    var key = $"{role}|{string.Join(",", permissions.Order())}";
+    return _clients.GetOrAdd(key, _ => CreateAuthorizedClientAsync(role, permissions));
   }
 }
