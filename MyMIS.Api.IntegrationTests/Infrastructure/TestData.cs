@@ -87,4 +87,9 @@ public static class TestData
 
       await db.SaveChangesAsync();
     });
+
+  // A unique, valid Philippine mobile number: "+63917" plus 7 random digits (10 digits after +63,
+  // starting with 917). The create-employee endpoint validates numbers with libphonenumber,
+  // so unlike the database-level tests this one has to be a real-looking number.
+  public static string NewMobile() => $"+63917{Random.Shared.Next(1_000_000, 9_999_999)}";
 }
