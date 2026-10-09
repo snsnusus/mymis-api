@@ -80,10 +80,7 @@ public class HmoProviderService(AppDbContext context)
     var normalized = NormalizeName(name);
 
     return await _context.HmoProviders.AnyAsync(p =>
-      // EF Core can't translate StringComparison overloads to SQL; ToLower() becomes lower()
-#pragma warning disable CA1862
-      p.Name.ToLower() == normalized &&
-#pragma warning restore CA1862
+      p.NormalizedName == normalized &&
       (excludeId == null || p.Id != excludeId));
   }
 

@@ -59,12 +59,10 @@ public class HmoPlanService(AppDbContext context)
     var normalized = HmoPlanMapping.NormalizeName(name);
 
     return await _context.HmoPlans.AnyAsync(p =>
-        p.HmoProviderId == providerId &&
-        // EF Core can't translate StringComparison overloads to SQL; ToLower() becomes lower()
-#pragma warning disable CA1862
-        p.Name.ToLower() == normalized &&
-#pragma warning restore CA1862
-        (excludeId == null || p.Id != excludeId));
+      p.HmoProviderId == providerId &&
+      p.NormalizedName == normalized &&
+      (excludeId == null || p.Id != excludeId));
+
   }
 
   public async Task<ServiceResult<HmoPlanResponseDto>> CreateAsync(HmoPlanCreateDto dto)
