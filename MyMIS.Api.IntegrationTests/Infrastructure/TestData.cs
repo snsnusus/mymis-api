@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using MyMIS.Api.Models;
 
 namespace MyMIS.Api.IntegrationTests.Infrastructure;
@@ -92,4 +93,14 @@ public static class TestData
   // starting with 917). The create-employee endpoint validates numbers with libphonenumber,
   // so unlike the database-level tests this one has to be a real-looking number.
   public static string NewMobile() => $"+63917{Random.Shared.Next(1_000_000, 9_999_999)}";
+
+  // A client already logged in as the given employee (the one returned by SeedEmployeeAsync).
+  public static async Task<HttpClient> CreateClientForAsync(this ApiFactory factory, Employee employee)
+  {
+    var token = await factory.LoginAsync(employee.Username);
+
+    var client = factory.CreateApiClient();
+    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    return client;
+  }
 }
