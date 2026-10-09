@@ -60,4 +60,41 @@ public class DbUpdateExceptionExtensionsTests
     // Act + Assert
     Assert.Null(exception.GetUniqueViolationConstraint());
   }
+
+  [Fact]
+  public void GetForeignKeyViolationConstraint_ForeignKeyViolation_ReturnsTheConstraintName()
+  {
+    // Arrange
+    var exception = new DbUpdateException(
+      "Could not save.",
+      NewPostgresException(PostgresErrorCodes.ForeignKeyViolation, "FK_Cities_Regions_RegionId"));
+
+    // Act
+    var constraint = exception.GetForeignKeyViolationConstraint();
+
+    // Assert
+    Assert.Equal("FK_Cities_Regions_RegionId", constraint);
+  }
+
+  [Fact]
+  public void GetForeignKeyViolationConstraint_UniqueViolation_ReturnsNull()
+  {
+    // Arrange
+    var exception = new DbUpdateException(
+      "Could not save.",
+      NewPostgresException(PostgresErrorCodes.UniqueViolation, "IX_Offices_NormalizedName"));
+
+    // Act + Assert
+    Assert.Null(exception.GetForeignKeyViolationConstraint());
+  }
+
+  [Fact]
+  public void GetForeignKeyViolationConstraint_InnerExceptionIsNotPostgres_ReturnsNull()
+  {
+    // Arrange
+    var exception = new DbUpdateException("Could not save.", new Exception("not postgres"));
+
+    // Act + Assert
+    Assert.Null(exception.GetForeignKeyViolationConstraint());
+  }
 }

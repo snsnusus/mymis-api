@@ -16,4 +16,16 @@ public static class DbUpdateExceptionExtensions
 
     return null;
   }
+
+  // Returns the name of the foreign key that was violated (e.g. "FK_Cities_Regions_RegionId"),
+  // or null if this DbUpdateException was caused by something else.
+  public static string? GetForeignKeyViolationConstraint(this DbUpdateException ex)
+  {
+    if (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } pg)
+    {
+      return pg.ConstraintName;
+    }
+
+    return null;
+  }
 }
