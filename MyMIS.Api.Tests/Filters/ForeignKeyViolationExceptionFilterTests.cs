@@ -10,9 +10,8 @@ using Npgsql;
 
 namespace MyMIS.Api.Tests.Filters;
 
-// These cover the cases the filter must NOT touch. The case it handles (a real delete
-// blocked by a real foreign key) is covered by the integration tests, because it needs
-// a real DbUpdateException that carries a real Deleted entry.
+// The unit tests cover the 400 path and the cases it must ignore, 
+// while the 409 path needs a real delete
 public class ForeignKeyViolationExceptionFilterTests
 {
   private static ExceptionContext NewContext(Exception exception) =>
@@ -66,10 +65,9 @@ public class ForeignKeyViolationExceptionFilterTests
   }
 
   [Fact]
-  public void OnException_ForeignKeyViolationWithoutADeletedEntry_IsLeftUntouched()
+  public void OnException_ForeignKeyViolationThatIsNotADelete_Returns400()
   {
-    // Arrange: no entries at all, the same as an insert or update that points at a missing row.
-    // That is bad input, not "still in use", so it must stay as it is.
+    // Arrange: no deleted entry, the same as an insert or update that points at a missing row
     var exception = new DbUpdateException(
       "Could not save.",
       NewPostgresException(PostgresErrorCodes.ForeignKeyViolation, "FK_Barangays_Cities_CityId"));
@@ -79,7 +77,14 @@ public class ForeignKeyViolationExceptionFilterTests
     NewFilter().OnException(context);
 
     // Assert
-    Assert.Null(context.Result);
-    Assert.False(context.ExceptionHandled);
+    var result = Assert.IsType<BadRequestObjectResult>(context.Result);
+    Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+    Assert.True(context.ExceptionHandled);
+
+    var problem = Assert.IsType<ProblemDetails>(result.Value);
+    Assert.Equal(400, problem.Status);
+    Assert.Equal(
+      ForeignKeyViolationExceptionFilter.MissingReferenceMessage,
+      (string?)problem.Extensions["message"]);
   }
 }
