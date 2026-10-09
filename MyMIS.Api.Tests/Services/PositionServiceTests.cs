@@ -300,4 +300,111 @@ public class PositionServiceTests : IDisposable
     // Assert
     Assert.False(result);
   }
+
+  // ---------------- GetAllAsync: departmentId filter ----------------
+
+  private async Task<Department> SeedDepartmentAsync(string name, string slug)
+  {
+    var department = new Department { Name = name, Slug = slug, Status = "Active" };
+    _context.Departments.Add(department);
+    await _context.SaveChangesAsync();
+    return department;
+  }
+
+  private async Task SeedPositionAsync(Department department, string title, string slug, int sortOrder = 1)
+  {
+    _context.Positions.Add(new Position
+    {
+      Title = title,
+      Slug = slug,
+      Description = "A position description.",
+      SortOrder = sortOrder,
+      IsActive = true,
+      IsApprover = false,
+      DepartmentId = department.Id,
+    });
+    await _context.SaveChangesAsync();
+  }
+
+  [Fact]
+  public async Task GetAllAsync_FilteredByDepartment_ReturnsOnlyThatDepartmentsPositions()
+  {
+    // Arrange: an uneven split, so a filter that did nothing would be noticed
+    var hr = await SeedDepartmentAsync("Human Resources", "HRD");
+    var tech = await SeedDepartmentAsync("Information Technology", "ITD");
+    await SeedPositionAsync(hr, "Manager", "MNGR");
+    await SeedPositionAsync(hr, "Associate", "ASSOC");
+    await SeedPositionAsync(hr, "Director", "DIR");
+    await SeedPositionAsync(tech, "Developer", "DEV");
+
+    // Act
+    var result = await _service.GetAllAsync(hr.Id);
+
+    // Assert
+    Assert.Equal(3, result.Count);
+    Assert.All(result, p => Assert.Equal(hr.Id, p.DepartmentId));
+  }
+
+  [Fact]
+  public async Task GetAllAsync_NoFilter_ReturnsPositionsOfEveryDepartment()
+  {
+    // Arrange
+    var hr = await SeedDepartmentAsync("Human Resources", "HRD");
+    var tech = await SeedDepartmentAsync("Information Technology", "ITD");
+    await SeedPositionAsync(hr, "Manager", "MNGR");
+    await SeedPositionAsync(tech, "Developer", "DEV");
+
+    // Act
+    var result = await _service.GetAllAsync();
+
+    // Assert
+    Assert.Equal(2, result.Count);
+  }
+
+  [Fact]
+  public async Task GetAllAsync_Ordering_IsDepartmentNameThenSortOrderThenTitle()
+  {
+    // Arrange: seeded scrambled. "Beta" and "Zed" share SortOrder 1, so the title breaks the tie.
+    var tech = await SeedDepartmentAsync("Information Technology", "ITD");
+    var hr = await SeedDepartmentAsync("Human Resources", "HRD");
+    await SeedPositionAsync(tech, "Dev", "DEV", sortOrder: 1);
+    await SeedPositionAsync(hr, "Alpha", "ALPHA", sortOrder: 2);
+    await SeedPositionAsync(hr, "Zed", "ZED", sortOrder: 1);
+    await SeedPositionAsync(hr, "Beta", "BETA", sortOrder: 1);
+
+    // Act
+    var result = await _service.GetAllAsync();
+
+    // Assert: Human Resources before Information Technology, then SortOrder, then Title
+    Assert.Equal(
+      new[] { "Beta", "Zed", "Alpha", "Dev" },
+      result.Select(p => p.Title));
+  }
+
+  [Fact]
+  public async Task GetAllAsync_FilteredByDepartment_OrdersBySortOrderThenTitle()
+  {
+    // Arrange
+    var hr = await SeedDepartmentAsync("Human Resources", "HRD");
+    await SeedPositionAsync(hr, "Zed", "ZED", sortOrder: 1);
+    await SeedPositionAsync(hr, "Alpha", "ALPHA", sortOrder: 3);
+    await SeedPositionAsync(hr, "Beta", "BETA", sortOrder: 1);
+
+    // Act
+    var result = await _service.GetAllAsync(hr.Id);
+
+    // Assert
+    Assert.Equal(new[] { "Beta", "Zed", "Alpha" }, result.Select(p => p.Title));
+  }
+
+  [Fact]
+  public async Task GetAllAsync_DepartmentWithNoPositionsOrUnknownDepartment_ReturnsEmptyList()
+  {
+    // Arrange
+    var empty = await SeedDepartmentAsync("Finance", "FIN");
+
+    // Act + Assert: an existing department with no positions, and an id that doesn't exist
+    Assert.Empty(await _service.GetAllAsync(empty.Id));
+    Assert.Empty(await _service.GetAllAsync(9999));
+  }
 }
