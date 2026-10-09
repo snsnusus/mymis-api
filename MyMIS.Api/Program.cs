@@ -8,10 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MyMIS.Api.Authorization;
 using MyMIS.Api.Data;
+using MyMIS.Api.Filters;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
-using Scalar.AspNetCore;
 using MyMIS.Api.OpenApi;
+using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,7 +25,11 @@ var awsOptions = builder.Configuration.GetSection("Aws").Get<S3Options>()
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
   ?? throw new InvalidOperationException("Jwt configuration section is missing.");
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+  // Turns unique-index violations from any controller action into a 409 (see Helpers/UniqueConstraints.cs).
+  options.Filters.Add<UniqueViolationExceptionFilter>();
+});
 
 builder.Services.AddOpenApi(options =>
 {
