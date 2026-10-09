@@ -28,5 +28,11 @@ public static class UniqueConstraints
       // Locations
       ["IX_Cities_RegionId_Name"] = ("Name", "A city with this name already exists in this region."),
       ["IX_Barangays_CityId_Name"] = ("Name", "A barangay with this name already exists in this city."),
+
+      // One primary per employee
+      ["IX_EmergencyContacts_EmployeeId_Primary"] = ("IsPrimary", "The primary emergency contact changed while saving. Please try again."),
+      ["IX_EmployeeAddresses_EmployeeId_Primary"] = ("IsPrimary", "The primary address changed while saving. Please try again."),
+      ["IX_EmployeePhones_EmployeeId_Primary"] = ("IsPrimary", "The primary phone number changed while saving. Please try again."),
+      ["IX_EmployeeEmails_EmployeeId_Primary"] = ("IsPrimary", "The primary email changed while saving. Please try again."),
     };
 }
