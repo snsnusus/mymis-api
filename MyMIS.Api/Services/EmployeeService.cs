@@ -77,9 +77,17 @@ public class EmployeeService(
       PageSize = pageSize,
     };
   }
-  public async Task<List<EmployeeLookupDto>> GetLookupAsync(string? search, int limit)
+  public async Task<List<EmployeeLookupDto>> GetLookupAsync(string? search, int limit, int[]? ids = null)
   {
-    var results = await ApplySearch(_context.Employees, search)
+    var query = ApplySearch(_context.Employees, search);
+
+    // Only these employees, when the caller asks for specific ids.
+    if (ids is { Length: > 0 })
+    {
+      query = query.Where(e => ids.Contains(e.Id));
+    }
+
+    var results = await query
       .OrderBy(e => e.LastName)
       .ThenBy(e => e.FirstName)
       .ThenBy(e => e.Id)
