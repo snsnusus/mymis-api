@@ -121,5 +121,30 @@ public class HmoProviderService(AppDbContext context)
     return await GetByIdAsync(id);
   }
 
-
+  // Active providers that have at least one active plan, for the employee HMO dropdowns.
+  public async Task<List<HmoProviderLookupDto>> GetLookupAsync()
+  {
+    return await _context.HmoProviders
+        .AsNoTracking()
+        .Where(p => p.IsActive && p.Plans.Any(plan => plan.IsActive))
+        .OrderBy(p => p.Name)
+        .Select(p => new HmoProviderLookupDto
+        {
+          Id = p.Id,
+          Name = p.Name,
+          ContractStartDate = p.ContractStartDate,
+          ContractEndDate = p.ContractEndDate,
+          Plans = p.Plans
+              .Where(plan => plan.IsActive)
+              .OrderBy(plan => plan.Name)
+              .Select(plan => new HmoPlanLookupDto
+              {
+                Id = plan.Id,
+                Name = plan.Name,
+                AllowDependents = plan.AllowDependents,
+              })
+              .ToList(),
+        })
+        .ToListAsync();
+  }
 }

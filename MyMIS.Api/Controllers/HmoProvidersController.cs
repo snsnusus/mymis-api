@@ -7,18 +7,28 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "hmo.manage")]
+[Authorize] // logged in; management actions add hmo.manage below
 public class HmoProvidersController(HmoProviderService service) : ControllerBase
 {
   private readonly HmoProviderService _service = service;
 
   [HttpGet]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<List<HmoProviderResponseDto>>> GetAll()
   {
     return Ok(await _service.GetAllAsync());
   }
 
+  // Active providers with their active plans, for the employee HMO dropdowns.
+  // Any logged-in user: it holds no pricing or contacts.
+  [HttpGet("lookup")]
+  public async Task<ActionResult<List<HmoProviderLookupDto>>> GetLookup()
+  {
+    return Ok(await _service.GetLookupAsync());
+  }
+
   [HttpGet("{id:int}")]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoProviderResponseDto>> GetById(int id)
   {
     var provider = await _service.GetByIdAsync(id);
@@ -31,6 +41,7 @@ public class HmoProvidersController(HmoProviderService service) : ControllerBase
   }
 
   [HttpPost]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoProviderResponseDto>> Create(HmoProviderCreateDto dto)
   {
     if (await _service.CodeExistsAsync(dto.Code))
@@ -49,6 +60,7 @@ public class HmoProvidersController(HmoProviderService service) : ControllerBase
   }
 
   [HttpPut("{id:int}")]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoProviderResponseDto>> Update(int id, HmoProviderUpdateDto dto)
   {
     if (await _service.GetByIdAsync(id) is null)
