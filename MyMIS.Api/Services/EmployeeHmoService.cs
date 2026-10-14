@@ -168,7 +168,8 @@ public class EmployeeHmoService(AppDbContext context)
         : ServiceResult<HmoPlan>.Invalid(dependentError);
   }
 
-  // The employee's plan: exists, still offered, and the dates fit the provider's contract.
+  // The employee's plan: exists and is still offered (plan and provider both active).
+  // Contract dates on the provider are kept for the record only; they don't limit enrollment.
   private async Task<ServiceResult<HmoPlan>> ValidatePlanAsync(EmployeeHmoFieldsDto dto)
   {
     var planId = dto.HmoPlanId!.Value;
@@ -186,22 +187,6 @@ public class EmployeeHmoService(AppDbContext context)
     if (!plan.IsActive || !plan.HmoProvider.IsActive)
     {
       return ServiceResult<HmoPlan>.Invalid("This HMO plan is no longer offered.");
-    }
-
-    var provider = plan.HmoProvider;
-    var effectiveDate = dto.EffectiveDate!.Value;
-
-    if (effectiveDate < provider.ContractStartDate || effectiveDate > provider.ContractEndDate)
-    {
-      return ServiceResult<HmoPlan>.Invalid(
-          $"The effective date must fall within the provider's contract " +
-          $"({provider.ContractStartDate:yyyy-MM-dd} to {provider.ContractEndDate:yyyy-MM-dd}).");
-    }
-
-    if (dto.EndDate > provider.ContractEndDate)
-    {
-      return ServiceResult<HmoPlan>.Invalid(
-          $"The end date cannot be after the provider's contract ends ({provider.ContractEndDate:yyyy-MM-dd}).");
     }
 
     return ServiceResult<HmoPlan>.Success(plan);
