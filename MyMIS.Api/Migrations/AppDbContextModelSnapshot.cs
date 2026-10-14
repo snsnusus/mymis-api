@@ -389,6 +389,122 @@ namespace MyMIS.Api.Migrations
                     b.ToTable("EmployeeEmails");
                 });
 
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("EffectiveDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("HmoPlanId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HmoProviderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MemberNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HmoPlanId");
+
+                    b.HasIndex(new[] { "EmployeeId" }, "IX_EmployeeHmos_EmployeeId");
+
+                    b.HasIndex(new[] { "EmployeeId" }, "IX_EmployeeHmos_EmployeeId_Active")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.HasIndex(new[] { "HmoProviderId", "MemberNumber" }, "IX_EmployeeHmos_HmoProviderId_MemberNumber")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.ToTable("EmployeeHmos");
+                });
+
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmoDependent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Birthdate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("EmployeeHmoId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("HmoPlanId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("MemberNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MiddleName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Relationship")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Suffix")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeHmoId");
+
+                    b.HasIndex("HmoPlanId");
+
+                    b.ToTable("EmployeeHmoDependents");
+                });
+
             modelBuilder.Entity("MyMIS.Api.Models.EmployeeHobby", b =>
                 {
                     b.Property<int>("EmployeeId")
@@ -1064,6 +1180,48 @@ namespace MyMIS.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmo", b =>
+                {
+                    b.HasOne("MyMIS.Api.Models.Employee", null)
+                        .WithMany("HmoEnrollments")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyMIS.Api.Models.HmoPlan", "HmoPlan")
+                        .WithMany()
+                        .HasForeignKey("HmoPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MyMIS.Api.Models.HmoProvider", "HmoProvider")
+                        .WithMany()
+                        .HasForeignKey("HmoProviderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("HmoPlan");
+
+                    b.Navigation("HmoProvider");
+                });
+
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmoDependent", b =>
+                {
+                    b.HasOne("MyMIS.Api.Models.EmployeeHmo", null)
+                        .WithMany("Dependents")
+                        .HasForeignKey("EmployeeHmoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyMIS.Api.Models.HmoPlan", "HmoPlan")
+                        .WithMany()
+                        .HasForeignKey("HmoPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("HmoPlan");
+                });
+
             modelBuilder.Entity("MyMIS.Api.Models.EmployeeHobby", b =>
                 {
                     b.HasOne("MyMIS.Api.Models.Employee", "Employee")
@@ -1213,9 +1371,16 @@ namespace MyMIS.Api.Migrations
 
                     b.Navigation("EmployeePermissions");
 
+                    b.Navigation("HmoEnrollments");
+
                     b.Navigation("PersonalDetail");
 
                     b.Navigation("Phones");
+                });
+
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmo", b =>
+                {
+                    b.Navigation("Dependents");
                 });
 
             modelBuilder.Entity("MyMIS.Api.Models.HmoPlan", b =>

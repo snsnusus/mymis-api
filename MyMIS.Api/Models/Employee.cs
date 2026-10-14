@@ -77,5 +77,7 @@ public class Employee
 
   public ICollection<EmployeeEmail> Emails { get; set; } = [];
 
+  public ICollection<EmployeeHmo> HmoEnrollments { get; set; } = [];
+
   public DateTime? DeletedAt { get; set; }
 }

@@ -1,3 +1,4 @@
+using Amazon.S3.Model;
 using Microsoft.EntityFrameworkCore;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Models;
@@ -16,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<EmployeeAddress> EmployeeAddresses => Set<EmployeeAddress>();
   public DbSet<EmployeeEmail> EmployeeEmails => Set<EmployeeEmail>();
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
+  public DbSet<EmployeeHmo> EmployeeHmos => Set<EmployeeHmo>();
+  public DbSet<EmployeeHmoDependent> EmployeeHmoDependents => Set<EmployeeHmoDependent>();
   public DbSet<EmployeePhone> EmployeePhones => Set<EmployeePhone>();
   public DbSet<HmoPlanCoverage> HmoPlanCoverages => Set<HmoPlanCoverage>();
   public DbSet<HmoPlan> HmoPlans => Set<HmoPlan>();
@@ -316,5 +319,66 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.HasSequence<long>(EmployeeCodeFormat.SequenceName)
       .StartsAt(1)
       .IncrementsBy(1);
+
+    // Employee HMO
+    modelBuilder.Entity<EmployeeHmo>(entity =>
+    {
+      entity.HasOne<Employee>()
+      .WithMany(e => e.HmoEnrollments)
+      .HasForeignKey(h => h.EmployeeId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(h => h.HmoProvider)
+      .WithMany()
+      .HasForeignKey(h => h.HmoProviderId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+      entity.HasOne(h => h.HmoPlan)
+      .WithMany()
+      .HasForeignKey(h => h.HmoPlanId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+      entity.Property(h => h.MemberNumber)
+      .HasMaxLength(50);
+
+      entity.HasIndex(h => h.EmployeeId, "IX_EmployeeHmos_EmployeeId");
+
+      entity.HasIndex(h => h.EmployeeId, "IX_EmployeeHmos_EmployeeId_Active")
+      .IsUnique()
+      .HasFilter("\"DeletedAt\" IS NULL");
+
+      entity.HasIndex(h => new { h.HmoProviderId, h.MemberNumber }, "IX_EmployeeHmos_HmoProviderId_MemberNumber")
+      .IsUnique()
+      .HasFilter("\"DeletedAt\" IS NULL");
+
+      entity.HasQueryFilter(h => h.DeletedAt == null);
+    });
+
+    modelBuilder.Entity<EmployeeHmoDependent>(entity =>
+    {
+      entity.HasOne<EmployeeHmo>()
+      .WithMany(h => h.Dependents)
+      .HasForeignKey(d => d.EmployeeHmoId)
+      .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(d => d.HmoPlan)
+      .WithMany()
+      .HasForeignKey(d => d.HmoPlanId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+      entity.Property(d => d.FirstName).HasMaxLength(100);
+
+      entity.Property(d => d.MiddleName).HasMaxLength(100);
+
+      entity.Property(d => d.LastName).HasMaxLength(100);
+
+      entity.Property(d => d.Suffix).HasMaxLength(20);
+
+      entity.Property(d => d.MemberNumber).HasMaxLength(50);
+
+      entity.Property(d => d.Relationship).HasConversion<string>().HasMaxLength(20);
+
+      entity.HasQueryFilter(d => d.DeletedAt == null);
+    });
   }
 }
