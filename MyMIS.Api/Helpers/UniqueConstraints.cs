@@ -34,5 +34,9 @@ public static class UniqueConstraints
       ["IX_EmployeeAddresses_EmployeeId_Primary"] = ("IsPrimary", "The primary address changed while saving. Please try again."),
       ["IX_EmployeePhones_EmployeeId_Primary"] = ("IsPrimary", "The primary phone number changed while saving. Please try again."),
       ["IX_EmployeeEmails_EmployeeId_Primary"] = ("IsPrimary", "The primary email changed while saving. Please try again."),
+
+      // Employee HMO
+      ["IX_EmployeeHmos_EmployeeId_Active"] = ("Hmo", "This employee already has an active HMO enrollment."),
+      ["IX_EmployeeHmos_HmoProviderId_MemberNumber"] = ("MemberNumber", "This member number is already used by another employee under the same HMO provider."),
     };
 }
