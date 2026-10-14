@@ -38,7 +38,7 @@ public class HmoPlanFieldsDto : IValidatableObject
   [Range(typeof(decimal), "0.01", "9999999999.99", ParseLimitsInInvariantCulture = true)]
   public decimal? PecLimit { get; set; }
 
-  public bool AllowDependents { get; set; }
+  public bool AllowDependents { get; set; } = true;
 
   [Range(typeof(decimal), "0.01", "9999999999.99", ParseLimitsInInvariantCulture = true)]
   public decimal? DependentPremiumCost { get; set; }

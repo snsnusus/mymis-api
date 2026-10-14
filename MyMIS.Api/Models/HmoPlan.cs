@@ -34,7 +34,7 @@ public class HmoPlan
 
   public decimal? PecLimit { get; set; }
 
-  public bool AllowDependents { get; set; }
+  public bool AllowDependents { get; set; } = true;
 
   public decimal? DependentPremiumCost { get; set; }
 
