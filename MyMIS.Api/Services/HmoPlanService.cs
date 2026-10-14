@@ -157,4 +157,21 @@ public class HmoPlanService(AppDbContext context)
                 })]
             })]
   };
+
+  // Active plans of an active provider, for the plan dropdown.
+  // An unknown or inactive provider simply has no options, so this returns an empty list.
+  public async Task<List<HmoPlanLookupDto>> GetLookupAsync(int providerId)
+  {
+    return await _context.HmoPlans
+        .AsNoTracking()
+        .Where(p => p.HmoProviderId == providerId && p.IsActive && p.HmoProvider.IsActive)
+        .OrderBy(p => p.Name)
+        .Select(p => new HmoPlanLookupDto
+        {
+          Id = p.Id,
+          Name = p.Name,
+          AllowDependents = p.AllowDependents,
+        })
+        .ToListAsync();
+  }
 }

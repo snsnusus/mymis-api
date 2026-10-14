@@ -9,12 +9,13 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "hmo.manage")]
+[Authorize]
 public class HmoPlansController(HmoPlanService service) : ControllerBase
 {
   private readonly HmoPlanService _service = service;
 
   [HttpGet]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<List<HmoPlanSummaryDto>>> GetByProvider(
       [FromQuery, BindRequired] int providerId)
   {
@@ -27,7 +28,15 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
     return Ok(plans);
   }
 
+  [HttpGet("lookup")]
+  public async Task<ActionResult<List<HmoPlanLookupDto>>> GetLookup(
+      [FromQuery, BindRequired] int providerId)
+  {
+    return Ok(await _service.GetLookupAsync(providerId));
+  }
+
   [HttpGet("{id:int}")]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoPlanResponseDto>> GetById(int id)
   {
     var plan = await _service.GetByIdAsync(id);
@@ -40,6 +49,7 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
   }
 
   [HttpPost]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoPlanResponseDto>> Create(HmoPlanCreateDto dto)
   {
     if (await _service.NameExistsAsync(dto.HmoProviderId!.Value, dto.Name))
@@ -57,6 +67,7 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
   }
 
   [HttpPut("{id:int}")]
+  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoPlanResponseDto>> Update(int id, HmoPlanCreateDto dto)
   {
     if (!await _service.ExistsAsync(id))
