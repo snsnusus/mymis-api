@@ -19,6 +19,7 @@ public class EmployeesController(
   EmergencyContactService emergencyContactService,
   EmployeeAddressService employeeAddressService,
   EmployeeEmailService employeeEmailService,
+  EmployeeHmoService employeeHmoService,
   EmployeePhoneService employeePhoneService,
   IAuthorizationService authorizationService
 ) : ControllerBase
@@ -27,6 +28,7 @@ public class EmployeesController(
   private readonly EmergencyContactService _emergencyContactService = emergencyContactService;
   private readonly EmployeeAddressService _employeeAddressService = employeeAddressService;
   private readonly EmployeeEmailService _employeeEmailService = employeeEmailService;
+  private readonly EmployeeHmoService _employeeHmoService = employeeHmoService;
   private readonly EmployeePhoneService _employeePhoneService = employeePhoneService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
 
@@ -120,6 +122,16 @@ public class EmployeesController(
     if (phoneCheck.ErrorType == ServiceErrorType.Conflict)
     {
       return PhonesConflict(phoneCheck.ErrorMessage!);
+    }
+
+    if (dto.Hmo is not null)
+    {
+      var hmoCheck = await _employeeHmoService.ValidateForCreateAsync(dto.Hmo);
+      if (!hmoCheck.IsSuccess)
+      {
+        ModelState.AddModelError(nameof(dto.Hmo), hmoCheck.ErrorMessage!);
+        return ValidationProblem(ModelState);
+      }
     }
 
     if (!await _employeeService.IsUsernameAvailableAsync(dto.Username))

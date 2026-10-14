@@ -272,6 +272,18 @@ public class EmployeeService(
       }
     }
 
+    if (dto.Hmo is not null)
+    {
+      // Validated by EmployeesController first; this lookup only reads the provider id.
+      var hmoPlan = await _context.HmoPlans
+          .AsNoTracking()
+          .FirstOrDefaultAsync(p => p.Id == dto.Hmo.HmoPlanId)
+          ?? throw new InvalidOperationException(
+              "The HMO enrollment must be validated before CreateAsync is called.");
+
+      employee.HmoEnrollments.Add(EmployeeHmoService.NewEntity(dto.Hmo, hmoPlan));
+    }
+
     _context.Employees.Add(employee);
     await SaveChangesCheckingUsernameAsync();
 

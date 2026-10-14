@@ -77,4 +77,8 @@ public class EmployeeCreateDto
   [Required]
   [MinLength(1, ErrorMessage = "At least one phone is required.")]
   public List<EmployeePhoneCreateDto>? Phones { get; set; }
+
+  // Optional. Null means the employee isn't enrolled yet; HR can enroll later
+  // through POST /api/Employees/{id}/hmo.
+  public EmployeeHmoCreateDto? Hmo { get; set; }
 }
