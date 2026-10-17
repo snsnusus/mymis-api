@@ -54,4 +54,6 @@ public class EmployeeResponseDto
 
   public List<EmergencyContactResponseDto>? EmergencyContacts { get; set; }
 
+  public EmployeeGovernmentIdResponseDto? GovernmentIds { get; set; }
+
 }

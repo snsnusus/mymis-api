@@ -81,4 +81,8 @@ public class EmployeeCreateDto
   // Optional. Null means the employee isn't enrolled yet; HR can enroll later
   // through POST /api/Employees/{id}/hmo.
   public EmployeeHmoCreateDto? Hmo { get; set; }
+
+  // Optional. Null or all-blank means nothing recorded yet; HR can add them later
+  // through PUT /api/Employees/{id}/government-ids.
+  public EmployeeGovernmentIdUpdateDto? GovernmentIds { get; set; }
 }

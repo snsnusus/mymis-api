@@ -20,11 +20,7 @@ public class EmployeeService(
   private readonly S3UploadService _s3UploadService = s3UploadService;
   private readonly IEmployeeCodeGenerator _employeeCodeGenerator = employeeCodeGenerator;
 
-  public async Task<PagedResult<EmployeeSummaryResponseDto>> GetPagedAsync(
-      string? search,
-      int page,
-      int pageSize
-    )
+  public async Task<PagedResult<EmployeeSummaryResponseDto>> GetPagedAsync(string? search, int page, int pageSize)
   {
     // Filter once, then count AND page that same filtered query.
     var query = ApplySearch(_context.Employees, search);
@@ -77,6 +73,7 @@ public class EmployeeService(
       PageSize = pageSize,
     };
   }
+
   public async Task<List<EmployeeLookupDto>> GetLookupAsync(string? search, int limit, int[]? ids = null)
   {
     var query = ApplySearch(_context.Employees, search);
@@ -117,7 +114,7 @@ public class EmployeeService(
     return results;
   }
 
-  public async Task<EmployeeResponseDto?> GetByIdAsync(int id, bool includeEmergencyContacts)
+  public async Task<EmployeeResponseDto?> GetByIdAsync(int id, bool includePrivateDetails)
   {
     IQueryable<Employee> query = _context.Employees
         .Include(e => e.Department)
@@ -126,7 +123,7 @@ public class EmployeeService(
         .Include(e => e.EmployeeHobbies)
             .ThenInclude(eh => eh.Hobby);
 
-    if (includeEmergencyContacts)
+    if (includePrivateDetails)
     {
       query = query
         .Include(e => e.EmergencyContacts)
@@ -179,7 +176,7 @@ public class EmployeeService(
         IsActive = employee.Position.IsActive,
         IsApprover = employee.Position.IsApprover
       },
-      EmergencyContacts = includeEmergencyContacts
+      EmergencyContacts = includePrivateDetails
         ? [.. employee.EmergencyContacts
             .OrderByDescending(c => c.IsPrimary)
             .ThenBy(c => c.CreatedAt)
@@ -187,6 +184,9 @@ public class EmployeeService(
             .Select(EmergencyContactService.MapToResponse)]
         : null,
       Hobbies = [.. employee.EmployeeHobbies.Select(eh => new HobbyResponseDto { Id = eh.Hobby.Id, Name = eh.Hobby.Name })],
+      GovernmentIds = includePrivateDetails
+        ? (await EmployeeGovernmentIdService.FindActiveAsync(_context, id)) ?? new EmployeeGovernmentIdResponseDto()
+        : null,
     };
 
     if (!string.IsNullOrEmpty(responseDto.AvatarUrl))
@@ -202,7 +202,7 @@ public class EmployeeService(
     return responseDto;
   }
 
-  public async Task<EmployeeResponseDto> CreateAsync(EmployeeCreateDto dto)
+  public async Task<EmployeeResponseDto> CreateAsync(EmployeeCreateDto dto, int createdById)
   {
     var employeeCode = await _employeeCodeGenerator.GenerateAsync();
 
@@ -284,12 +284,18 @@ public class EmployeeService(
       employee.HmoEnrollments.Add(EmployeeHmoService.NewEntity(dto.Hmo, hmoPlan));
     }
 
+    if (dto.GovernmentIds is not null)
+    {
+      employee.GovernmentId = EmployeeGovernmentIdService.NewEntityForNewEmployee(dto.GovernmentIds, createdById);
+    }
+
     _context.Employees.Add(employee);
     await SaveChangesCheckingUsernameAsync();
 
-    return (await GetByIdAsync(employee.Id, includeEmergencyContacts: true))!
+    return (await GetByIdAsync(employee.Id, includePrivateDetails: true))!
         ?? throw new InvalidOperationException("Failed to reload newly created employee.");
   }
+
   public async Task<EmployeeResponseDto?> UpdateAsync(int id, EmployeeUpdateDto dto)
   {
     var employee = await _context.Employees
@@ -327,7 +333,7 @@ public class EmployeeService(
     employee.PersonalDetail.Bio = dto.PersonalDetail?.Bio;
 
     await SaveChangesCheckingUsernameAsync();
-    return (await GetByIdAsync(employee.Id, includeEmergencyContacts: true))!;
+    return (await GetByIdAsync(employee.Id, includePrivateDetails: true))!;
   }
 
   public async Task<EmployeeResponseDto?> UpdateSelfAsync(int employeeId, EmployeeSelfUpdateDto dto)
@@ -347,7 +353,7 @@ public class EmployeeService(
     employee.PersonalDetail.Bio = dto.Bio;
 
     await _context.SaveChangesAsync();
-    return await GetByIdAsync(employee.Id, includeEmergencyContacts: true);
+    return await GetByIdAsync(employee.Id, includePrivateDetails: true);
   }
 
   public async Task<EmployeeResponseDto?> UpdatePartialAsync(int id, EmployeePartialUpdateDto dto)
@@ -359,7 +365,7 @@ public class EmployeeService(
     employee.WorkSchedule = dto.WorkSchedule;
 
     await _context.SaveChangesAsync();
-    return await GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    return await GetByIdAsync(employee.Id, includePrivateDetails: false);
   }
 
   public async Task<bool> UpdateAvatarStyleAsync(int employeeId, AvatarStyle avatarStyle)
@@ -383,7 +389,16 @@ public class EmployeeService(
     var employee = await _context.Employees.FindAsync(id);
     if (employee is null) return false;
 
-    employee.DeletedAt = DateTime.UtcNow;
+    var now = DateTime.UtcNow;
+    employee.DeletedAt = now;
+
+    // Mirror the soft delete so these numbers stop counting toward the
+    // unique indexes and can be reused if the person is rehired.
+    var governmentIds = await _context.EmployeeGovernmentIds
+      .FirstOrDefaultAsync(g => g.EmployeeId == id);
+
+    governmentIds?.DeletedAt = now;
+
     await _context.SaveChangesAsync();
     return true;
   }

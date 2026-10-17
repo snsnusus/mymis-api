@@ -75,8 +75,8 @@ public class EmployeesController(
   [HttpGet("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> GetById(int id)
   {
-    var canSeeContacts = await CanSeeEmergencyContactsAsync(id);
-    var employee = await _employeeService.GetByIdAsync(id, includeEmergencyContacts: canSeeContacts);
+    var canSeeContacts = await CanSeePrivateDetailsAsync(id);
+    var employee = await _employeeService.GetByIdAsync(id, includePrivateDetails: canSeeContacts);
 
     if (employee is null) return NotFound();
     return Ok(employee);
@@ -86,6 +86,12 @@ public class EmployeesController(
   [HttpPost]
   public async Task<ActionResult<EmployeeResponseDto>> Create(EmployeeCreateDto dto)
   {
+
+    if (User.GetEmployeeId() is not int creatorId)
+    {
+      return Unauthorized();
+    }
+
     var (_, contactError) = await _emergencyContactService.ValidateAsync(dto.EmergencyContact!);
     if (contactError is not null)
     {
@@ -141,7 +147,7 @@ public class EmployeesController(
 
     try
     {
-      var created = await _employeeService.CreateAsync(dto);
+      var created = await _employeeService.CreateAsync(dto, creatorId);
       return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
     catch (DuplicateUsernameException)
@@ -154,8 +160,8 @@ public class EmployeesController(
   [HttpPut("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> Update(int id, EmployeeUpdateDto dto)
   {
-    var canSeeContacts = await CanSeeEmergencyContactsAsync(id);
-    var employee = await _employeeService.GetByIdAsync(id, includeEmergencyContacts: canSeeContacts);
+    var canSeePrivateDetails = await CanSeePrivateDetailsAsync(id);
+    var employee = await _employeeService.GetByIdAsync(id, includePrivateDetails: canSeePrivateDetails);
 
     if (employee is null)
     {
@@ -433,7 +439,7 @@ public class EmployeesController(
 
   // Emergency contacts are visible to the employee themselves and to anyone
   // who can create or update employees. SuperAdmin passes via PermissionHandler.
-  private async Task<bool> CanSeeEmergencyContactsAsync(int employeeId)
+  private async Task<bool> CanSeePrivateDetailsAsync(int employeeId)
   {
     if (GetCurrentEmployeeId() == employeeId)
     {
