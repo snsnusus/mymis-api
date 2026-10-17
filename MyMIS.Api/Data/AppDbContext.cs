@@ -12,10 +12,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Department> Departments => Set<Department>();
   public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
   public DbSet<Employee> Employees => Set<Employee>();
-  public DbSet<EmployeePermission> EmployeePermissions { get; set; }
+  public DbSet<EmployeePermission> EmployeePermissions => Set<EmployeePermission>();
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
   public DbSet<EmployeeAddress> EmployeeAddresses => Set<EmployeeAddress>();
   public DbSet<EmployeeEmail> EmployeeEmails => Set<EmployeeEmail>();
+  public DbSet<EmployeeGovernmentId> EmployeeGovernmentIds => Set<EmployeeGovernmentId>();
   public DbSet<EmployeeHobby> EmployeeHobbies => Set<EmployeeHobby>();
   public DbSet<EmployeeHmo> EmployeeHmos => Set<EmployeeHmo>();
   public DbSet<EmployeeHmoDependent> EmployeeHmoDependents => Set<EmployeeHmoDependent>();
@@ -25,7 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<HmoProvider> HmoProviders => Set<HmoProvider>();
   public DbSet<Hobby> Hobbies => Set<Hobby>();
   public DbSet<Office> Offices => Set<Office>();
-  public DbSet<Permission> Permissions { get; set; }
+  public DbSet<Permission> Permissions => Set<Permission>();
   public DbSet<Position> Positions => Set<Position>();
   public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
   public DbSet<Region> Regions => Set<Region>();
@@ -60,8 +61,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasMaxLength(20);
 
     modelBuilder.Entity<Employee>()
-    .HasIndex(e => e.Username)
-    .IsUnique();
+      .HasIndex(e => e.Username)
+      .IsUnique();
 
     modelBuilder.Entity<Employee>()
       .HasIndex(e => e.EmployeeCode)
@@ -379,6 +380,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       entity.Property(d => d.Relationship).HasConversion<string>().HasMaxLength(20);
 
       entity.HasQueryFilter(d => d.DeletedAt == null);
+    });
+
+    modelBuilder.Entity<EmployeeGovernmentId>(entity =>
+    {
+      entity.HasQueryFilter(g => g.DeletedAt == null);
+
+      // 1:1 — the dependent side (this table) holds the FK.
+      entity.HasOne(g => g.Employee)
+            .WithOne(e => e.GovernmentId)
+            .HasForeignKey<EmployeeGovernmentId>(g => g.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+      // One partial unique index per number: uniqueness only among active rows.
+      entity.HasIndex(g => g.SssNumber).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+      entity.HasIndex(g => g.PhilHealthNumber).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+      entity.HasIndex(g => g.PagIbigNumber).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+      entity.HasIndex(g => g.TinNumber).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+
+      entity.HasOne(g => g.UpdatedBy)
+        .WithMany()
+        .HasForeignKey(g => g.UpdatedById)
+        .OnDelete(DeleteBehavior.Restrict);
     });
   }
 }

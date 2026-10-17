@@ -79,5 +79,7 @@ public class Employee
 
   public ICollection<EmployeeHmo> HmoEnrollments { get; set; } = [];
 
+  public EmployeeGovernmentId? GovernmentId { get; set; }
+
   public DateTime? DeletedAt { get; set; }
 }

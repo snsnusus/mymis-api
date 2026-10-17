@@ -389,6 +389,67 @@ namespace MyMIS.Api.Migrations
                     b.ToTable("EmployeeEmails");
                 });
 
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeGovernmentId", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PagIbigNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhilHealthNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SssNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TinNumber")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UpdatedById")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique();
+
+                    b.HasIndex("PagIbigNumber")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.HasIndex("PhilHealthNumber")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.HasIndex("SssNumber")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.HasIndex("TinNumber")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("EmployeeGovernmentIds");
+                });
+
             modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmo", b =>
                 {
                     b.Property<int>("Id")
@@ -1180,6 +1241,25 @@ namespace MyMIS.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MyMIS.Api.Models.EmployeeGovernmentId", b =>
+                {
+                    b.HasOne("MyMIS.Api.Models.Employee", "Employee")
+                        .WithOne("GovernmentId")
+                        .HasForeignKey("MyMIS.Api.Models.EmployeeGovernmentId", "EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyMIS.Api.Models.Employee", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("MyMIS.Api.Models.EmployeeHmo", b =>
                 {
                     b.HasOne("MyMIS.Api.Models.Employee", null)
@@ -1370,6 +1450,8 @@ namespace MyMIS.Api.Migrations
                     b.Navigation("EmployeeHobbies");
 
                     b.Navigation("EmployeePermissions");
+
+                    b.Navigation("GovernmentId");
 
                     b.Navigation("HmoEnrollments");
 
