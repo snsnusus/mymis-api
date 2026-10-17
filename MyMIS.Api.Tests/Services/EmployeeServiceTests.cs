@@ -251,7 +251,7 @@ public class EmployeeServiceTests : IDisposable
   public async Task GetByIdAsync_NonExistentId_ReturnsNull()
   {
     // Act
-    var result = await _service.GetByIdAsync(999, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(999, includePrivateDetails: false);
 
     // Assert
     Assert.Null(result);
@@ -275,7 +275,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -325,7 +325,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -355,7 +355,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -397,7 +397,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -424,7 +424,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -450,7 +450,7 @@ public class EmployeeServiceTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(employee.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -475,10 +475,10 @@ public class EmployeeServiceTests : IDisposable
       Username = "mreyes",
       Password = "TempPass2026!",
       EmergencyContact = NewContactDto(),
-    });
+    }, 1);
 
     // Act
-    var result = await _service.GetByIdAsync(created.Id, includeEmergencyContacts: include);
+    var result = await _service.GetByIdAsync(created.Id, includePrivateDetails: include);
 
     // Assert
     Assert.NotNull(result);
@@ -509,7 +509,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: in the database...
     var contacts = await _context.EmergencyContacts
@@ -544,7 +544,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     var contact = await _context.EmergencyContacts
@@ -568,7 +568,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    await _service.CreateAsync(dto);
+    await _service.CreateAsync(dto, 1);
 
     // Assert
     var savedEmployee = await _context.Employees.FirstAsync(e => e.Username == "jdoe");
@@ -616,7 +616,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     Assert.NotNull(result.Position);
@@ -648,7 +648,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     var saved = await _context.EmployeeAddresses
@@ -681,7 +681,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: both saved through the employee.Phones navigation (EF filled in
     // EmployeeId), line types detected, and only the landline is primary
@@ -712,7 +712,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     Assert.True(result.Id > 0);
@@ -735,7 +735,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     Assert.True(result.Id > 0);
@@ -758,7 +758,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     Assert.Null(result.Position);
@@ -780,7 +780,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: returned in the response AND saved in the database
     Assert.Equal(AvatarStyle.Constellation, result.AvatarStyle);
@@ -806,7 +806,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: not defaulted to the first enum member
     Assert.Null(result.AvatarStyle);
@@ -827,7 +827,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: normalized in the response AND in the database
     Assert.Equal("jdoe", result.Username);
@@ -856,7 +856,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: in the response...
     Assert.Equal(EmployeeType.Client, result.EmployeeType);
@@ -887,7 +887,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: the code comes from the generator, in the response and the database
     Assert.Equal("MYMIS-TEST-00001", result.EmployeeCode);
@@ -910,7 +910,7 @@ public class EmployeeServiceTests : IDisposable
       MaritalStatus = "Single",
       Username = "jdoe",
       Password = "irrelevant-to-this-test",
-    });
+    }, 1);
 
     var updateDto = new EmployeeUpdateDto
     {
@@ -944,7 +944,7 @@ public class EmployeeServiceTests : IDisposable
       Username = "awong",
       Password = "OriginalPass1"
     };
-    var created = await _service.CreateAsync(createDto);
+    var created = await _service.CreateAsync(createDto, 1);
 
     var originalHash = (await _context.Employees.FirstAsync(e => e.Id == created.Id)).PasswordHash;
 
@@ -980,7 +980,7 @@ public class EmployeeServiceTests : IDisposable
       Username = "blee",
       Password = "OldPassword1"
     };
-    var created = await _service.CreateAsync(createDto);
+    var created = await _service.CreateAsync(createDto, 1);
     var originalHash = (await _context.Employees.FirstAsync(e => e.Id == created.Id)).PasswordHash;
 
     var updateDto = new EmployeeUpdateDto
@@ -1015,7 +1015,7 @@ public class EmployeeServiceTests : IDisposable
       Username = "jsmith",
       Password = "irrelevant-for-this-test",
     };
-    var created = await _service.CreateAsync(createDto);
+    var created = await _service.CreateAsync(createDto, 1);
 
     var employeeUpdateDto = new EmployeeUpdateDto
     {
@@ -1241,7 +1241,7 @@ public class EmployeeServiceTests : IDisposable
       EmployeeType = EmployeeType.Client,
       EmploymentStatus = EmploymentStatus.Probationary,
       JoiningDate = new DateOnly(2026, 10, 5),
-    });
+    }, 1);
 
     var updateDto = new EmployeeUpdateDto
     {
@@ -1280,7 +1280,7 @@ public class EmployeeServiceTests : IDisposable
       EmployeeType = EmployeeType.Client,
       EmploymentStatus = EmploymentStatus.Probationary,
       JoiningDate = new DateOnly(2026, 10, 5),
-    });
+    }, 1);
 
     var updateDto = new EmployeeUpdateDto
     {
@@ -1319,7 +1319,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     var saved = await _context.Employees.AsNoTracking().FirstAsync(e => e.Id == result.Id);
@@ -1467,7 +1467,7 @@ public class EmployeeServiceTests : IDisposable
       Password = "irrelevant-to-this-test"
     };
 
-    var createdResult = await _service.CreateAsync(createDto);
+    var createdResult = await _service.CreateAsync(createDto, 1);
 
     var selfUpdateDto = new EmployeeSelfUpdateDto
     {
@@ -1549,7 +1549,7 @@ public class EmployeeServiceTests : IDisposable
         Nickname = "Lei"
       }
     };
-    var createResult = await _service.CreateAsync(createDto);
+    var createResult = await _service.CreateAsync(createDto, 1);
     var partialUpdateDto = new EmployeePartialUpdateDto
     {
       OfficeLocation = "Pasig",
@@ -1603,7 +1603,7 @@ public class EmployeeServiceTests : IDisposable
       OfficeLocation = "Pasig",
       WorkSchedule = "Morning, 8AM - 5PM",
     };
-    var createResult = await _service.CreateAsync(createDto);
+    var createResult = await _service.CreateAsync(createDto, 1);
     var updateDto = new EmployeePartialUpdateDto
     {
       OfficeLocation = "Manila"
@@ -1631,7 +1631,7 @@ public class EmployeeServiceTests : IDisposable
       Username = "creyes",
       Password = "SomePassword1"
     };
-    var created = await _service.CreateAsync(createDto);
+    var created = await _service.CreateAsync(createDto, 1);
 
     // Act
     var deleteResult = await _service.DeleteAsync(created.Id);
@@ -1640,7 +1640,7 @@ public class EmployeeServiceTests : IDisposable
     Assert.True(deleteResult);
 
     // Normal query respects the global filter — should NOT find it
-    var viaService = await _service.GetByIdAsync(created.Id, includeEmergencyContacts: false);
+    var viaService = await _service.GetByIdAsync(created.Id, includePrivateDetails: false);
     Assert.Null(viaService);
 
     // Bypassing the filter proves the row still physically exists
@@ -2275,7 +2275,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert: both saved through the employee.Emails navigation, lowercased,
     // and only the first one is primary
@@ -2310,7 +2310,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     var saved = await _context.EmployeeEmails
@@ -2338,7 +2338,7 @@ public class EmployeeServiceTests : IDisposable
     };
 
     // Act
-    var result = await _service.CreateAsync(dto);
+    var result = await _service.CreateAsync(dto, 1);
 
     // Assert
     Assert.True(result.Id > 0);

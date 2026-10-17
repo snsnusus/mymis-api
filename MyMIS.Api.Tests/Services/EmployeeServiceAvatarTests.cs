@@ -189,7 +189,7 @@ public class EmployeeServiceAvatarTests : IDisposable
     await _context.SaveChangesAsync();
 
     // Act
-    var result = await _service.GetByIdAsync(_juan.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(_juan.Id, includePrivateDetails: false);
 
     // Assert
     Assert.NotNull(result);
@@ -201,7 +201,7 @@ public class EmployeeServiceAvatarTests : IDisposable
   public async Task GetByIdAsync_EmployeeWithoutAvatar_ReturnsNullUrls()
   {
     // Act
-    var result = await _service.GetByIdAsync(_juan.Id, includeEmergencyContacts: false);
+    var result = await _service.GetByIdAsync(_juan.Id, includePrivateDetails: false);
 
     // Assert: no key means no URL, and no signing call is needed
     Assert.NotNull(result);
