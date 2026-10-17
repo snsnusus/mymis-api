@@ -38,5 +38,12 @@ public static class UniqueConstraints
       // Employee HMO
       ["IX_EmployeeHmos_EmployeeId_Active"] = ("Hmo", "This employee already has an active HMO enrollment."),
       ["IX_EmployeeHmos_HmoProviderId_MemberNumber"] = ("MemberNumber", "This member number is already used by another employee under the same HMO provider."),
+
+      // Government IDs
+      ["IX_EmployeeGovernmentIds_SssNumber"] = ("SssNumber", "This SSS number is already used by another employee."),
+      ["IX_EmployeeGovernmentIds_PhilHealthNumber"] = ("PhilHealthNumber", "This PhilHealth number is already used by another employee."),
+      ["IX_EmployeeGovernmentIds_PagIbigNumber"] = ("PagIbigNumber", "This Pag-IBIG number is already used by another employee."),
+      ["IX_EmployeeGovernmentIds_TinNumber"] = ("TinNumber", "This TIN is already used by another employee."),
+      ["IX_EmployeeGovernmentIds_EmployeeId"] = ("GovernmentIds", "These government IDs changed while saving. Please try again."),
     };
 }
