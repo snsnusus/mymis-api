@@ -14,6 +14,7 @@ using MyMIS.Api.Services;
 using MyMIS.Api.OpenApi;
 using Scalar.AspNetCore;
 using System.Text;
+using MyMIS.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -154,6 +155,8 @@ app.UseHttpsRedirection();
 app.UseCors("PortalPolicy");
 
 app.UseAuthentication();
+
+app.UseMiddleware<MustChangePasswordMiddleware>();
 
 app.UseAuthorization();
 
