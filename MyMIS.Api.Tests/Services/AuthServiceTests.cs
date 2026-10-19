@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MSOPtions = Microsoft.Extensions.Options.Options;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Options;
@@ -14,6 +16,8 @@ public class AuthServiceTests : IDisposable
   private readonly AppDbContext _context;
   private readonly AuthService _service;
   private readonly TokenService _tokenService;
+
+  private const string MustChangePasswordClaim = "mustChangePassword";
 
   public AuthServiceTests()
   {
@@ -39,6 +43,19 @@ public class AuthServiceTests : IDisposable
   {
     _context.Dispose();
     GC.SuppressFinalize(this);
+  }
+
+  // Decodes an access token and returns one claim by name, or null if the token doesn't have it.
+  private static Claim? GetClaim(string accessToken, string claimType)
+  {
+    // ReadJwtToken only parses the string: it splits the three parts and
+    // Base64-decodes the payload. It does NOT check the signature or expiry,
+    // so it's jwtDecode(), not jwt.verify().
+    var token = new JwtSecurityTokenHandler().ReadJwtToken(accessToken);
+
+    // token.Claims is an IEnumerable<Claim>, one entry per payload property.
+    // FirstOrDefault is like JS .find(): the first match, or null when there is none.
+    return token.Claims.FirstOrDefault(c => c.Type == claimType);
   }
 
   [Fact]
@@ -153,7 +170,7 @@ public class AuthServiceTests : IDisposable
   [Theory]
   [InlineData(true)]
   [InlineData(false)]
-  public async Task LoginAsync_ValidCredentials_ReportsMustChangePassword(bool mustChangePassword)
+  public async Task LoginAsync_ValidCredentials_TokenHasMustChangePasswordClaimOnlyWhenFlagged(bool mustChangePassword)
   {
     // Arrange
     await SeedEmployeeAsync("johndoe", "correct-password", mustChangePassword);
@@ -163,7 +180,9 @@ public class AuthServiceTests : IDisposable
 
     // Assert
     Assert.NotNull(result);
-    Assert.Equal(mustChangePassword, result.MustChangePassword);
+
+    var claim = GetClaim(result.AccessToken, MustChangePasswordClaim);
+    Assert.Equal(mustChangePassword, claim is not null);
   }
 
   [Fact]
@@ -375,7 +394,7 @@ public class AuthServiceTests : IDisposable
   }
 
   [Fact]
-  public async Task RefreshAsync_EmployeeMustChangePassword_ReportsTrue()
+  public async Task RefreshAsync_EmployeeMustChangePassword_NewTokenStillHasClaim()
   {
     // Arrange
     await SeedEmployeeAsync("johndoe", "correct-password", mustChangePassword: true);
@@ -387,7 +406,11 @@ public class AuthServiceTests : IDisposable
 
     // Assert
     Assert.NotNull(refreshed);
-    Assert.True(refreshed.MustChangePassword);
+
+    var claim = GetClaim(refreshed.AccessToken, MustChangePasswordClaim);
+    Assert.NotNull(claim);
+    Assert.Equal("true", claim.Value);
+    Assert.Equal(ClaimValueTypes.Boolean, claim.ValueType);
   }
 
   [Fact]

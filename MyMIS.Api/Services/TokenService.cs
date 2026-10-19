@@ -11,53 +11,58 @@ namespace MyMIS.Api.Services;
 
 public class TokenService(IOptions<JwtOptions> jwtOptions)
 {
-    private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+  private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
-    public string GenerateAccessToken(Employee employee)
-    {
-        var claims = new List<Claim>
+  public string GenerateAccessToken(Employee employee)
+  {
+    var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, employee.Id.ToString()),
             new("name", employee.Username),
             new("role", employee.Role.ToString()),
         };
 
-        if (employee.DepartmentId.HasValue)
-        {
-            claims.Add(new Claim("departmentId", employee.DepartmentId.Value.ToString()));
-        }
-
-        foreach (var employeePermission in employee.EmployeePermissions)
-        {
-            claims.Add(new Claim("permission", employeePermission.Permission.Name));
-        }
-
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_jwtOptions.Key));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpiryMinutes),
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    public string GenerateRefreshToken()
+    if (employee.DepartmentId.HasValue)
     {
-        var randomBytes = new byte[64];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(randomBytes);
-        return Convert.ToBase64String(randomBytes);
+      claims.Add(new Claim("departmentId", employee.DepartmentId.Value.ToString()));
     }
 
-    public string HashToken(string token)
+    if (employee.MustChangePassword)
     {
-        var tokenBytes = Encoding.UTF8.GetBytes(token);
-        var hashBytes = SHA256.HashData(tokenBytes);
-        return Convert.ToBase64String(hashBytes);
+      claims.Add(new Claim("mustChangePassword", "true", ClaimValueTypes.Boolean));
     }
+
+    foreach (var employeePermission in employee.EmployeePermissions)
+    {
+      claims.Add(new Claim("permission", employeePermission.Permission.Name));
+    }
+
+    var key = new SymmetricSecurityKey(
+        Encoding.UTF8.GetBytes(_jwtOptions.Key));
+    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+    var token = new JwtSecurityToken(
+        issuer: _jwtOptions.Issuer,
+        audience: _jwtOptions.Audience,
+        claims: claims,
+        expires: DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpiryMinutes),
+        signingCredentials: creds);
+
+    return new JwtSecurityTokenHandler().WriteToken(token);
+  }
+
+  public string GenerateRefreshToken()
+  {
+    var randomBytes = new byte[64];
+    using var rng = RandomNumberGenerator.Create();
+    rng.GetBytes(randomBytes);
+    return Convert.ToBase64String(randomBytes);
+  }
+
+  public string HashToken(string token)
+  {
+    var tokenBytes = Encoding.UTF8.GetBytes(token);
+    var hashBytes = SHA256.HashData(tokenBytes);
+    return Convert.ToBase64String(hashBytes);
+  }
 }
