@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -155,7 +156,7 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
   }
 
   [Fact]
-  public async Task PostEmployee_ThenLoggingInAsThem_SaysTheyMustChangeTheirPassword()
+  public async Task PostEmployee_ThenLoggingInAsThem_TheirTokenSaysTheyMustChangeTheirPassword()
   {
     // Arrange
     var client = await CreatorClientAsync();
@@ -169,7 +170,13 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
     // Assert
     await HttpAssert.StatusAsync(HttpStatusCode.OK, login);
     using var json = await ReadJsonAsync(login);
-    Assert.True(json.RootElement.GetProperty("mustChangePassword").GetBoolean());
+
+    var accessToken = json.RootElement.GetProperty("accessToken").GetString();
+    Assert.NotNull(accessToken);
+
+    var token = new JwtSecurityTokenHandler().ReadJwtToken(accessToken);
+    var claim = token.Claims.FirstOrDefault(c => c.Type == "mustChangePassword");
+    Assert.NotNull(claim);
   }
 
   [Fact]

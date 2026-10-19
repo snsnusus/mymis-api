@@ -46,7 +46,6 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
     {
       AccessToken = accessToken,
       RefreshToken = rawRefreshToken,
-      MustChangePassword = employee.MustChangePassword,
     };
   }
 
@@ -104,7 +103,6 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
     {
       AccessToken = newAccessToken,
       RefreshToken = newRawRefreshToken,
-      MustChangePassword = existingToken.Employee.MustChangePassword,
     };
   }
 
