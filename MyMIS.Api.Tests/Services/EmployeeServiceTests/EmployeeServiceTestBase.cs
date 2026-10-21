@@ -17,6 +17,9 @@ public class EmployeeServiceTestBase : IDisposable
   protected readonly AppDbContext _context;
   protected readonly EmployeeService _service;
   protected readonly DateTime now = DateTime.UtcNow;
+  protected const int FakeProviderId = 1;
+  protected const int FakePlanId = 1;
+  protected const int FakeBarangayId = 1;
 
   protected EmployeeServiceTestBase()
   {
@@ -65,6 +68,108 @@ public class EmployeeServiceTestBase : IDisposable
     EmployeeCode = employeeCode,
     Username = employeeCode.ToLowerInvariant(),
     PasswordHash = "irrelevant-for-this-test",
+  };
+
+  protected EmployeeAddress NewAddress(int employeeId, int barangayId, bool isPrimary) => new()
+  {
+    EmployeeId = employeeId,
+    Type = AddressType.Present,
+    Address = new Address
+    {
+      AddressLine1 = "Seeded Address 1,",
+      BarangayId = barangayId,
+      PostalCode = "1600"
+    },
+    IsPrimary = isPrimary,
+    CreatedAt = now,
+    UpdatedAt = now,
+  };
+
+  protected EmployeeEmail NewEmail(int employeeId, string email, bool isPrimary) => new()
+  {
+    EmployeeId = employeeId,
+    Ownership = ContactOwnership.Personal,
+    Email = email,
+    IsPrimary = isPrimary,
+    CreatedAt = now,
+    UpdatedAt = now,
+  };
+
+  protected EmployeePhone NewPhone(int employeeId, string number, bool isPrimary) => new()
+  {
+    EmployeeId = employeeId,
+    Phone = new Phone { CountryCode = "PH", Number = number },   // fresh instance per call
+    LineType = PhoneLineType.Mobile,
+    Ownership = ContactOwnership.Personal,
+    IsPrimary = isPrimary,
+    CreatedAt = now,
+    UpdatedAt = now,
+  };
+
+  protected EmployeeGovernmentId NewGovernmentIds(
+    int employeeId,
+    int? updatedById = null,
+    string? sssNumber = "0123456789",
+    string? philHealthNumber = "012345678901",
+    string? pagIbigNumber = "012345678901",
+    string? tinNumber = "012345678") => new()
+    {
+      EmployeeId = employeeId,
+      SssNumber = sssNumber,
+      PhilHealthNumber = philHealthNumber,
+      PagIbigNumber = pagIbigNumber,
+      TinNumber = tinNumber,
+      UpdatedById = updatedById ?? employeeId,
+      CreatedAt = now,
+      UpdatedAt = now,
+    };
+
+  protected EmergencyContact NewContact(
+    int employeeId,
+    string firstName,
+    string lastName,
+    string phoneNumber,
+    bool isPrimary,
+    int barangayId = FakeBarangayId
+  ) => new()
+  {
+    EmployeeId = employeeId,
+    FirstName = firstName,
+    LastName = lastName,
+    Relationship = EmergencyContactRelationship.Spouse,
+    IsPrimary = isPrimary,
+    Address = new Address
+    {
+      AddressLine1 = "Seeded Address",
+      BarangayId = barangayId,
+      PostalCode = "1600"
+    },
+    Phone = new Phone { CountryCode = "PH", Number = phoneNumber },
+    CreatedAt = now,
+    UpdatedAt = now,
+  };
+
+  protected EmployeeHmo NewHmo(int employeeId, int dependentCount = 1) => new()
+  {
+    EmployeeId = employeeId,
+    HmoProviderId = FakeProviderId,
+    HmoPlanId = FakePlanId,
+    MemberNumber = "00000001",
+    EffectiveDate = new DateOnly(2026, 9, 30),
+    Dependents = [.. Enumerable.Range(1, dependentCount).Select(NewDependent)],
+    CreatedAt = now,
+    UpdatedAt = now,
+  };
+
+  protected EmployeeHmoDependent NewDependent(int number) => new()
+  {
+    FirstName = $"Dependent {number}",
+    LastName = "Cruz",
+    Birthdate = new DateOnly(2015, 1, 1),
+    Relationship = HmoDependentRelationship.Child,
+    HmoPlanId = FakePlanId,   // dependents carry their own plan id, same as the API stores it
+    CreatedAt = now,
+    UpdatedAt = now,
   };
 
   protected static EmergencyContactCreateDto NewContactDto(bool isPrimary = false) => new()

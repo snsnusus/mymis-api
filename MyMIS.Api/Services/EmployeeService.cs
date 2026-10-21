@@ -392,12 +392,61 @@ public class EmployeeService(
     var now = DateTime.UtcNow;
     employee.DeletedAt = now;
 
-    // Mirror the soft delete so these numbers stop counting toward the
-    // unique indexes and can be reused if the person is rehired.
-    var governmentIds = await _context.EmployeeGovernmentIds
-      .FirstOrDefaultAsync(g => g.EmployeeId == id);
+    var addresses = await _context.EmployeeAddresses
+      .Where(a => a.EmployeeId == id)
+      .ToListAsync();
+    var emails = await _context.EmployeeEmails
+      .Where(e => e.EmployeeId == id)
+      .ToListAsync();
+    var emergencyContacts = await _context.EmergencyContacts
+      .Where(ec => ec.EmployeeId == id)
+      .ToListAsync();
+    var phones = await _context.EmployeePhones
+      .Where(p => p.EmployeeId == id)
+      .ToListAsync();
+
+    var governmentIds = await _context.EmployeeGovernmentIds.FirstOrDefaultAsync(g => g.EmployeeId == id);
+    var hmo = await _context.EmployeeHmos
+      .Include(h => h.Dependents)
+      .FirstOrDefaultAsync(h => h.EmployeeId == id);
+
+    foreach (var address in addresses)
+    {
+      address.UpdatedAt = now;
+      address.DeletedAt = now;
+    }
+
+    foreach (var email in emails)
+    {
+      email.UpdatedAt = now;
+      email.DeletedAt = now;
+    }
+
+    foreach (var contact in emergencyContacts)
+    {
+      contact.UpdatedAt = now;
+      contact.DeletedAt = now;
+    }
+
+    foreach (var phone in phones)
+    {
+      phone.UpdatedAt = now;
+      phone.DeletedAt = now;
+    }
 
     governmentIds?.DeletedAt = now;
+
+    if (hmo is not null)
+    {
+      hmo.UpdatedAt = now;
+      hmo.DeletedAt = now;
+
+      foreach (var dependent in hmo.Dependents)
+      {
+        dependent.UpdatedAt = now;
+        dependent.DeletedAt = now;
+      }
+    }
 
     await _context.SaveChangesAsync();
     return true;
