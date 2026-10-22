@@ -61,8 +61,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasMaxLength(20);
 
     modelBuilder.Entity<Employee>()
-      .HasIndex(e => e.Username)
-      .IsUnique();
+      .HasIndex(e => e.Username, "IX_Employees_Username")
+      .IsUnique()
+      .HasFilter("\"DeletedAt\" IS NULL");
 
     modelBuilder.Entity<Employee>()
       .HasIndex(e => e.EmployeeCode)

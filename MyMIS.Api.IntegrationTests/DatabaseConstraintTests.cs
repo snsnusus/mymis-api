@@ -275,6 +275,35 @@ public class DatabaseConstraintTests(ApiFactory factory)
   }
 
   [Fact]
+  public async Task Employees_SoftDeletedEmployeesUsername_CanBeReused()
+  {
+    // Arrange
+    var former = await factory.SeedEmployeeAsync();
+    await factory.ExecuteDbAsync(async db =>
+    {
+      var row = await db.Employees.FindAsync(former.Id);
+      row!.DeletedAt = DateTime.UtcNow;
+      await db.SaveChangesAsync();
+    });
+
+    // Act + Assert: a new, live employee takes the same username; no exception
+    await factory.ExecuteDbAsync(async db =>
+    {
+      db.Employees.Add(new Employee
+      {
+        FirstName = "Test",
+        LastName = "Rehire",
+        Gender = "MALE",
+        MaritalStatus = "SINGLE",
+        EmployeeCode = $"IT-{Unique()}",
+        Username = former.Username,
+        PasswordHash = "irrelevant",
+      });
+      await db.SaveChangesAsync();
+    });
+  }
+
+  [Fact]
   public async Task Employees_DuplicateEmployeeCode_IsRejected()
   {
     // Arrange

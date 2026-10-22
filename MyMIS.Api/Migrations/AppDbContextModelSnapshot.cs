@@ -296,8 +296,9 @@ namespace MyMIS.Api.Migrations
 
                     b.HasIndex("PositionId");
 
-                    b.HasIndex("Username")
-                        .IsUnique();
+                    b.HasIndex(new[] { "Username" }, "IX_Employees_Username")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
 
                     b.ToTable("Employees");
                 });

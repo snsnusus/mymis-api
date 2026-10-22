@@ -557,7 +557,8 @@ public class EmployeeService(
     var normalized = UsernameRules.Normalize(username);
 
     var query = _context.Employees
-      .IgnoreQueryFilters()
+      // No IgnoreQueryFilters(): a soft-deleted employee's username is free again,
+      // matching the filtered IX_Employees_Username index (live rows only).
       .Where(e => e.Username == normalized);
 
     if (excludeEmployeeId is int idToExclude)
