@@ -410,6 +410,10 @@ public class EmployeeService(
       .Include(h => h.Dependents)
       .FirstOrDefaultAsync(h => h.EmployeeId == id);
 
+    var refreshTokens = await _context.RefreshTokens
+      .Where(rt => rt.EmployeeId == id && rt.RevokedAt == null)
+      .ToListAsync();
+
     foreach (var address in addresses)
     {
       address.UpdatedAt = now;
@@ -446,6 +450,11 @@ public class EmployeeService(
         dependent.UpdatedAt = now;
         dependent.DeletedAt = now;
       }
+    }
+
+    foreach (var token in refreshTokens)
+    {
+      token.RevokedAt = now;
     }
 
     await _context.SaveChangesAsync();

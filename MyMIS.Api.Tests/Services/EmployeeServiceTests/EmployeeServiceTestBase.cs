@@ -172,6 +172,16 @@ public class EmployeeServiceTestBase : IDisposable
     UpdatedAt = now,
   };
 
+  protected RefreshToken NewRefreshToken(int employeeId, string tokenHash, DateTime? revokedAt = null) => new()
+  {
+    TokenHash = tokenHash,
+    EmployeeId = employeeId,
+    RevokedAt = revokedAt,
+    ExpiresAt = now.AddDays(7),
+    CreatedAt = now,
+  };
+
+
   protected static EmergencyContactCreateDto NewContactDto(bool isPrimary = false) => new()
   {
     FirstName = "Jose",

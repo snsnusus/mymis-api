@@ -343,4 +343,113 @@ public class DeleteAsyncTests : EmployeeServiceTestBase
       .SingleAsync(eg => eg.EmployeeId == employeeJane.Id);
     Assert.Null(retainedEmployeeJaneGovernmentIds.DeletedAt);
   }
+
+  [Fact]
+  public async Task DeleteAsync_EmployeeWithActiveRefreshTokens_RevokesThemWithTheEmployeesTimestamp()
+  {
+    // Arrange
+    var employee = NewEmployee("Joe", "Smith", "EMP-001");
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var token1 = NewRefreshToken(employee.Id, "hash-active-1");
+    var token2 = NewRefreshToken(employee.Id, "hash-active-2");
+
+    _context.RefreshTokens.AddRange(token1, token2);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.DeleteAsync(employee.Id);
+    _context.ChangeTracker.Clear();
+
+    // Assert
+    Assert.True(result);
+
+    var deletedEmployee = await _context.Employees
+      .IgnoreQueryFilters()
+      .SingleAsync(e => e.Id == employee.Id);
+    Assert.NotNull(deletedEmployee.DeletedAt);
+    var expected = deletedEmployee.DeletedAt;
+
+    var tokens = await _context.RefreshTokens
+      .Where(rt => rt.EmployeeId == employee.Id)
+      .ToListAsync();
+
+    Assert.Equal(2, tokens.Count);
+    Assert.All(tokens, t => Assert.Equal(expected, t.RevokedAt));
+  }
+
+  [Fact]
+  public async Task DeleteAsync_RevokedRefreshToken_KeepItsOldTimestamp()
+  {
+    // Arrange
+    var earlierRevokedAt = now.AddDays(-3);
+    var employee = NewEmployee("Joe", "Smith", "EMP-001");
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var activeToken = NewRefreshToken(employee.Id, "hash-active-1");
+    var revokedToken = NewRefreshToken(employee.Id, "hash-revoked-1", earlierRevokedAt);
+
+    _context.RefreshTokens.AddRange(revokedToken, activeToken);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.DeleteAsync(employee.Id);
+    _context.ChangeTracker.Clear();
+
+    // Assert
+    Assert.True(result);
+
+    var deletedEmployee = await _context.Employees
+      .IgnoreQueryFilters()
+      .SingleAsync(e => e.Id == employee.Id);
+    Assert.NotNull(deletedEmployee.DeletedAt);
+    var expected = deletedEmployee.DeletedAt;
+
+    var recentlyRevokedToken = await _context.RefreshTokens
+      .SingleAsync(rt => rt.EmployeeId == employee.Id && rt.Id == activeToken.Id);
+    Assert.Equal(expected, recentlyRevokedToken.RevokedAt);
+
+    var alreadyRevokedToken = await _context.RefreshTokens
+      .SingleAsync(rt => rt.EmployeeId == employee.Id && rt.Id == revokedToken.Id);
+    Assert.Equal(earlierRevokedAt, alreadyRevokedToken.RevokedAt);
+  }
+
+  [Fact]
+  public async Task DeleteAsync_OtherEmployeesRefreshTokens_AreNotRevoked()
+  {
+    // Arrange
+    var employee1 = NewEmployee("Joe", "Smith", "EMP-001");
+    var employee2 = NewEmployee("Jane", "Doe", "EMP-002");
+    _context.Employees.AddRange(employee1, employee2);
+    await _context.SaveChangesAsync();
+
+    var employee1Token = NewRefreshToken(employee1.Id, "hash-active-1");
+    var employee2Token = NewRefreshToken(employee2.Id, "hash-active-2");
+    _context.RefreshTokens.AddRange(employee1Token, employee2Token);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.DeleteAsync(employee1.Id);
+    _context.ChangeTracker.Clear();
+
+    // Assert
+    Assert.True(result);
+
+    var deletedEmployee = await _context.Employees
+      .IgnoreQueryFilters()
+      .SingleAsync(e => e.Id == employee1.Id);
+    Assert.NotNull(deletedEmployee.DeletedAt);
+    var expected = deletedEmployee.DeletedAt;
+
+    var deletedEmployeeToken = await _context.RefreshTokens
+      .SingleAsync(rt => rt.EmployeeId == employee1.Id);
+    Assert.Equal(expected, deletedEmployeeToken.RevokedAt);
+
+    var activeEmployeeToken = await _context.RefreshTokens
+      .SingleAsync(rt => rt.EmployeeId == employee2.Id);
+    Assert.Null(activeEmployeeToken.RevokedAt);
+  }
+
 }
