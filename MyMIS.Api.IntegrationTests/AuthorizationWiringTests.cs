@@ -93,24 +93,24 @@ public class AuthorizationWiringTests(ApiFactory factory)
 
   // Routes gated by [Authorize(Roles = "...")]: one row per role,
   // with whether that role is allowed through.
-  public static TheoryData<string, string, Role, bool> RoleGated
+  public static TheoryData<string, string, LegacyRole, bool> RoleGated
   {
     get
     {
-      (string Method, string Url, Role[] Allowed)[] endpoints =
+      (string Method, string Url, LegacyRole[] Allowed)[] endpoints =
       [
-        ("POST",   "/api/Departments", new[] { Role.Admin, Role.SuperAdmin }),
-        ("PUT",    $"/api/Departments/{Missing}", new[] { Role.Admin, Role.SuperAdmin }),
-        ("DELETE", $"/api/Departments/{Missing}", new[] { Role.SuperAdmin }),
-        ("DELETE", $"/api/Positions/{Missing}", new[] { Role.SuperAdmin }),
-        ("PUT",    $"/api/Employees/partial/{Missing}", new[] { Role.Admin, Role.SuperAdmin }),
+        ("POST",   "/api/Departments", new[] { LegacyRole.Admin, LegacyRole.SuperAdmin }),
+        ("PUT",    $"/api/Departments/{Missing}", new[] { LegacyRole.Admin, LegacyRole.SuperAdmin }),
+        ("DELETE", $"/api/Departments/{Missing}", new[] { LegacyRole.SuperAdmin }),
+        ("DELETE", $"/api/Positions/{Missing}", new[] { LegacyRole.SuperAdmin }),
+        ("PUT",    $"/api/Employees/partial/{Missing}", new[] { LegacyRole.Admin, LegacyRole.SuperAdmin }),
       ];
 
-      var data = new TheoryData<string, string, Role, bool>();
+      var data = new TheoryData<string, string, LegacyRole, bool>();
 
       foreach (var (method, url, allowed) in endpoints)
       {
-        foreach (var role in Enum.GetValues<Role>())
+        foreach (var role in Enum.GetValues<LegacyRole>())
         {
           data.Add(method, url, role, allowed.Contains(role));
         }
@@ -159,7 +159,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task PermissionGated_LoggedInWithNoPermissions_Returns403(string method, string url, string permission)
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.User);
+    var client = await factory.GetClientAsync(LegacyRole.User);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -175,7 +175,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task PermissionGated_WithOnlyTheRequiredPermission_IsNotRejected(string method, string url, string permission)
   {
     // Arrange: a plain User holding just this one permission
-    var client = await factory.GetClientAsync(Role.User, permission);
+    var client = await factory.GetClientAsync(LegacyRole.User, permission);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -192,7 +192,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
   {
     // Arrange: all permissions except the one this route needs
     var others = TestPermissions.All.Where(p => p != permission).ToArray();
-    var client = await factory.GetClientAsync(Role.User, others);
+    var client = await factory.GetClientAsync(LegacyRole.User, others);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -208,7 +208,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task PermissionGated_AsSuperAdmin_IsNotRejected(string method, string url, string permission)
   {
     // Arrange: SuperAdmin holds no permissions at all, but bypasses the check
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -240,7 +240,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task LoginOnly_LoggedInWithNoPermissions_IsNotRejected(string method, string url)
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.User);
+    var client = await factory.GetClientAsync(LegacyRole.User);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -253,7 +253,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
 
   [Theory]
   [MemberData(nameof(RoleGated))]
-  public async Task RoleGated_OnlyTheListedRolesGetThrough(string method, string url, Role role, bool allowed)
+  public async Task RoleGated_OnlyTheListedRolesGetThrough(string method, string url, LegacyRole role, bool allowed)
   {
     // Arrange
     var client = await factory.GetClientAsync(role);

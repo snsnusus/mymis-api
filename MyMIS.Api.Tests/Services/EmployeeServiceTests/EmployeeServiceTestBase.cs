@@ -2,12 +2,12 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
 using MyMIS.Api.Options;
 using MyMIS.Api.Services;
-using MyMIS.Api.Tests.TestData;
 using MSOptions = Microsoft.Extensions.Options.Options;
 
 namespace MyMIS.Api.Tests.Services.EmployeeServiceTests;
@@ -27,8 +27,16 @@ public class EmployeeServiceTestBase : IDisposable
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options;
 
-
     _context = new AppDbContext(options);
+
+    _context.Roles.Add(new Role
+    {
+      Name = "Employee",
+      NormalizedName = SystemRoleNames.Employee,
+      CreatedAt = now,
+      UpdatedAt = now,
+    });
+    _context.SaveChanges();
 
     var hobbyService = new HobbyService(_context);
 
@@ -221,8 +229,6 @@ public class EmployeeServiceTestBase : IDisposable
     IsPrimary = isPrimary,
   };
 
-  // Five employees, inserted out of order.
-  // Sorted by last name: Bautista, Cruz, Garcia, Reyes, Santos.
   protected async Task SeedFiveEmployeesAsync()
   {
     _context.Employees.AddRange(
@@ -245,5 +251,4 @@ public class EmployeeServiceTestBase : IDisposable
     await _context.SaveChangesAsync();
     return barangay;
   }
-
 }

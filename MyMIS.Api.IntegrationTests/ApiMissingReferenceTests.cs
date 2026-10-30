@@ -33,7 +33,7 @@ public class ApiMissingReferenceTests(ApiFactory factory)
   public async Task PostBarangay_WithACityThatDoesNotExist_Returns400AndSavesNothing()
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var name = $"Barangay {Unique()}";
 
     // Act
@@ -48,7 +48,7 @@ public class ApiMissingReferenceTests(ApiFactory factory)
   public async Task PostCity_WithARegionThatDoesNotExist_Returns400AndSavesNothing()
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var name = $"City {Unique()}";
 
     // Act
@@ -63,7 +63,7 @@ public class ApiMissingReferenceTests(ApiFactory factory)
   public async Task PostPosition_WithADepartmentThatDoesNotExist_Returns400AndSavesNothing()
   {
     // Arrange: SuperAdmin passes the SameDepartment check, so the foreign key is what rejects it
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var slug = $"P{Unique()}";
 
     // Act
@@ -87,7 +87,7 @@ public class ApiMissingReferenceTests(ApiFactory factory)
   public async Task PutBarangay_MovedToACityThatDoesNotExist_Returns400AndKeepsTheOldCity()
   {
     // Arrange: an update, not an insert, so the rejected entity is Modified instead of Added
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var city = await factory.SeedCityAsync(await factory.SeedRegionAsync());
     var barangay = await factory.SeedBarangayAsync(city);
 

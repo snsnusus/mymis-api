@@ -248,6 +248,13 @@ namespace MyMIS.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("LegacyRole")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("User")
+                        .HasColumnName("Role");
+
                     b.Property<string>("MaritalStatus")
                         .IsRequired()
                         .HasColumnType("text");
@@ -270,11 +277,8 @@ namespace MyMIS.Api.Migrations
                     b.Property<int?>("PositionId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("User");
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Suffix")
                         .HasMaxLength(20)
@@ -295,6 +299,8 @@ namespace MyMIS.Api.Migrations
                         .IsUnique();
 
                     b.HasIndex("PositionId");
+
+                    b.HasIndex("RoleId");
 
                     b.HasIndex(new[] { "Username" }, "IX_Employees_Username")
                         .IsUnique()
@@ -321,6 +327,9 @@ namespace MyMIS.Api.Migrations
                         .HasColumnType("integer");
 
                     b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowInProfile")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Type")
@@ -371,6 +380,9 @@ namespace MyMIS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("ShowInProfile")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -629,6 +641,9 @@ namespace MyMIS.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("ShowInProfile")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId")
@@ -666,6 +681,9 @@ namespace MyMIS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("ShowInProfile")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1049,6 +1067,65 @@ namespace MyMIS.Api.Migrations
                     b.ToTable("Regions");
                 });
 
+            modelBuilder.Entity("MyMIS.Api.Models.Role", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("Roles");
+                });
+
+            modelBuilder.Entity("MyMIS.Api.Models.RolePermission", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
+                });
+
             modelBuilder.Entity("MyMIS.Api.Models.Barangay", b =>
                 {
                     b.HasOne("MyMIS.Api.Models.City", "City")
@@ -1176,9 +1253,17 @@ namespace MyMIS.Api.Migrations
                         .HasForeignKey("PositionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("MyMIS.Api.Models.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Department");
 
                     b.Navigation("Position");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("MyMIS.Api.Models.EmployeeAddress", b =>
@@ -1435,6 +1520,25 @@ namespace MyMIS.Api.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("MyMIS.Api.Models.RolePermission", b =>
+                {
+                    b.HasOne("MyMIS.Api.Models.Permission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyMIS.Api.Models.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("MyMIS.Api.Models.Department", b =>
                 {
                     b.Navigation("Employees");
@@ -1479,6 +1583,11 @@ namespace MyMIS.Api.Migrations
             modelBuilder.Entity("MyMIS.Api.Models.Hobby", b =>
                 {
                     b.Navigation("EmployeeHobbies");
+                });
+
+            modelBuilder.Entity("MyMIS.Api.Models.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
                 });
 #pragma warning restore 612, 618
         }

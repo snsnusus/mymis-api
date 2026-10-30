@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.IntegrationTests.Infrastructure;
 using MyMIS.Api.Models;
@@ -257,6 +258,8 @@ public class DatabaseConstraintTests(ApiFactory factory)
     // Act
     var constraint = await UniqueViolationOfAsync(() => factory.ExecuteDbAsync(async db =>
     {
+      var roleId = await db.GetRoleIdAsync(SystemRoleNames.Employee);
+
       db.Employees.Add(new Employee
       {
         FirstName = "Test",
@@ -266,6 +269,7 @@ public class DatabaseConstraintTests(ApiFactory factory)
         EmployeeCode = $"IT-{Unique()}",
         Username = existing.Username,
         PasswordHash = "irrelevant",
+        RoleId = roleId,
       });
       await db.SaveChangesAsync();
     }));
@@ -289,6 +293,8 @@ public class DatabaseConstraintTests(ApiFactory factory)
     // Act + Assert: a new, live employee takes the same username; no exception
     await factory.ExecuteDbAsync(async db =>
     {
+      var roleId = await db.GetRoleIdAsync(SystemRoleNames.Employee);
+
       db.Employees.Add(new Employee
       {
         FirstName = "Test",
@@ -298,6 +304,7 @@ public class DatabaseConstraintTests(ApiFactory factory)
         EmployeeCode = $"IT-{Unique()}",
         Username = former.Username,
         PasswordHash = "irrelevant",
+        RoleId = roleId,
       });
       await db.SaveChangesAsync();
     });
@@ -312,6 +319,8 @@ public class DatabaseConstraintTests(ApiFactory factory)
     // Act
     var constraint = await UniqueViolationOfAsync(() => factory.ExecuteDbAsync(async db =>
     {
+      var roleId = await db.GetRoleIdAsync(SystemRoleNames.Employee);
+
       db.Employees.Add(new Employee
       {
         FirstName = "Test",
@@ -321,6 +330,7 @@ public class DatabaseConstraintTests(ApiFactory factory)
         EmployeeCode = existing.EmployeeCode,
         Username = $"it{Unique()}",
         PasswordHash = "irrelevant",
+        RoleId = roleId,
       });
       await db.SaveChangesAsync();
     }));

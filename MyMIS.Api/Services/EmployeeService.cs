@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Exceptions;
@@ -237,6 +238,15 @@ public class EmployeeService(
         Bio = dto.PersonalDetail?.Bio
       }
     };
+
+    var employeeRoleId = await _context.Roles
+        .Where(r => r.NormalizedName == SystemRoleNames.Employee)
+        .Select(r => (int?)r.Id)
+        .FirstOrDefaultAsync()
+        ?? throw new InvalidOperationException(
+            "The system Employee role is missing. Have the migrations been applied?");
+
+    employee.RoleId = employeeRoleId;
 
     if (dto.EmergencyContact is not null)
     {

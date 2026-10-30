@@ -71,7 +71,7 @@ public class AuthServiceTests : IDisposable
       MaritalStatus = "SINGLE",
       EmployeeCode = "E-2026-050",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("johndoe"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -104,7 +104,7 @@ public class AuthServiceTests : IDisposable
       MaritalStatus = "SINGLE",
       EmployeeCode = "EMP001",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("this-is-the-correct-password"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -145,7 +145,7 @@ public class AuthServiceTests : IDisposable
       MaritalStatus = "SINGLE",
       EmployeeCode = "EMP-001",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("correct-password"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -208,7 +208,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP002",
       Username = "alicesmith",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("alicesmith"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -243,7 +243,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP002",
       Username = "alicesmith",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("alicesmith"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     var employeeTwo = new Employee
     {
@@ -254,7 +254,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP003",
       Username = "bobjohnson",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("bobjohnson"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.AddRange(employeeOne, employeeTwo);
     await _context.SaveChangesAsync();
@@ -319,7 +319,7 @@ public class AuthServiceTests : IDisposable
       MaritalStatus = "SINGLE",
       Username = "charliebrown",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("charliebrown"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
 
     _context.Employees.Add(employee);
@@ -361,7 +361,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP005",
       Username = "davidgreen",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("davidgreen"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
 
     _context.Employees.Add(employee);
@@ -428,7 +428,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP006",
       Username = "evewhite",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("evewhite"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
 
     _context.Employees.Add(employee);
@@ -469,7 +469,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP007",
       Username = "frankblack",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("frankblack"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
 
     _context.Employees.Add(employee);
@@ -510,7 +510,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP008",
       Username = "gracehopper",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("gracehopper"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -556,7 +556,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP009",
       Username = "henryford",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("henryford"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -589,7 +589,7 @@ public class AuthServiceTests : IDisposable
       EmployeeCode = "EMP010",
       Username = "ivylee",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword("ivylee"),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
     };
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
@@ -660,7 +660,7 @@ public class AuthServiceTests : IDisposable
       MaritalStatus = "SINGLE",
       EmployeeCode = $"EMP-{username}",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-      Role = Role.User,
+      LegacyRole = LegacyRole.User,
       MustChangePassword = mustChangePassword,
     };
     _context.Employees.Add(employee);

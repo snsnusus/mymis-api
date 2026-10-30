@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.Filters;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.IntegrationTests.Infrastructure;
@@ -81,7 +82,7 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
   private static Task<HttpResponseMessage> PostAsync(HttpClient client, NewEmployee request) =>
     client.PostAsJsonAsync("/api/Employees", request.Body);
 
-  private Task<HttpClient> CreatorClientAsync() => factory.GetClientAsync(Role.User, "employees.create");
+  private Task<HttpClient> CreatorClientAsync() => factory.GetClientAsync(LegacyRole.User, "employees.create");
 
   private Task<Employee?> FindEmployeeAsync(string username) =>
     factory.QueryDbAsync(db =>
@@ -337,6 +338,8 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
     // Act: one employee, one email that is fine, and one phone that collides, saved in a single SaveChanges
     var exception = await Assert.ThrowsAsync<DbUpdateException>(() => factory.ExecuteDbAsync(async db =>
     {
+      var roleId = await db.GetRoleIdAsync(SystemRoleNames.Employee);
+
       db.Employees.Add(new Employee
       {
         FirstName = "Atomic",
@@ -346,6 +349,7 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
         EmployeeCode = $"IT-{Unique()}",
         Username = username,
         PasswordHash = "irrelevant",
+        RoleId = roleId,
         Emails =
         [
           new EmployeeEmail
@@ -435,5 +439,77 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
     Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("Addresses", out _));
 
     await AssertSavedCountsAsync(request, employees: 0, emails: 0, phones: 0, contacts: 0);
+  }
+
+  // ---------------- rehire ----------------
+
+  [Fact]
+  public async Task PostEmployee_SameUsernameEmailAndMobileAsADeletedEmployee_Returns201()
+  {
+    // Arrange
+    var barangayId = await NewBarangayIdAsync();
+    var client = await CreatorClientAsync();
+    var request = NewRequest(barangayId);
+
+    var response = await PostAsync(client, request);
+
+    await HttpAssert.StatusAsync(HttpStatusCode.Created, response);
+
+    using var json = await ReadJsonAsync(response);
+    var id = json.RootElement.GetProperty("id").GetInt32();
+
+    var superAdmin = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var deleteResponse = await superAdmin.DeleteAsync($"/api/Employees/{id}");
+    await HttpAssert.StatusAsync(HttpStatusCode.NoContent, deleteResponse);
+
+    // Act: a new hire takes the deleted employee's username, email and mobile
+    var second = NewRequest(barangayId, username: request.Username, email: request.Email, mobile: request.Mobile);
+    var secondResponse = await PostAsync(client, second);
+
+    // Assert
+    await HttpAssert.StatusAsync(HttpStatusCode.Created, secondResponse);
+    // Counts include soft-deleted rows: the old employee's records are kept for history,
+    // and the rehire's new ones were saved next to them.
+    await AssertSavedCountsAsync(second, employees: 2, emails: 2, phones: 2, contacts: 1);
+  }
+
+  [Fact]
+  public async Task DeleteEmployee_TheirRefreshToken_IsRevokedAndRefreshReturns401()
+  {
+    // Arrange
+    var barangayId = await NewBarangayIdAsync();
+    var client = await CreatorClientAsync();
+    var request = NewRequest(barangayId);
+
+    var response = await PostAsync(client, request);
+    await HttpAssert.StatusAsync(HttpStatusCode.Created, response);
+
+    using var anonymous = factory.CreateApiClient();
+    var loginResponse = await anonymous.PostAsJsonAsync("/api/Auth/login", new { username = request.Username, password = Password });
+    await HttpAssert.StatusAsync(HttpStatusCode.OK, loginResponse);
+
+    using var tokens = await ReadJsonAsync(loginResponse);
+    var refreshToken = tokens.RootElement.GetProperty("refreshToken").GetString();
+    Assert.NotNull(refreshToken);
+
+    using var created = await ReadJsonAsync(response);
+    var id = created.RootElement.GetProperty("id").GetInt32();
+
+    var superAdmin = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var deleteResponse = await superAdmin.DeleteAsync($"/api/Employees/{id}");
+    await HttpAssert.StatusAsync(HttpStatusCode.NoContent, deleteResponse);
+
+    // Act
+    var refreshResponse = await anonymous.PostAsJsonAsync("/api/Auth/refresh", new { refreshToken });
+
+    // Assert
+    await HttpAssert.StatusAsync(HttpStatusCode.Unauthorized, refreshResponse);
+    var revokedAt = await factory.QueryDbAsync(db =>
+     db.RefreshTokens
+       .Where(rt => rt.EmployeeId == id)
+       .Select(rt => rt.RevokedAt)
+       .ToListAsync());
+    Assert.NotEmpty(revokedAt);
+    Assert.All(revokedAt, r => Assert.NotNull(r));
   }
 }

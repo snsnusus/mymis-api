@@ -19,7 +19,7 @@ public class TokenService(IOptions<JwtOptions> jwtOptions)
         {
             new(JwtRegisteredClaimNames.Sub, employee.Id.ToString()),
             new("name", employee.Username),
-            new("role", employee.Role.ToString()),
+            new("role", employee.LegacyRole.ToString()),
         };
 
     if (employee.DepartmentId.HasValue)

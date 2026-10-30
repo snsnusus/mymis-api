@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.Data;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Models;
@@ -89,12 +90,18 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
   // Inserts a new employee straight into the database, with a unique username each time,
   // and grants the named permissions (the migrations seed the permission rows).
-  public async Task<Employee> SeedEmployeeAsync(Role role = Role.User, params string[] permissions)
+  public async Task<Employee> SeedEmployeeAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
   {
     var suffix = Guid.NewGuid().ToString("N")[..10];
 
     using var scope = Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var roleName = role == LegacyRole.SuperAdmin
+      ? SystemRoleNames.SuperAdmin
+      : SystemRoleNames.Employee;
+
+    var roleId = await db.GetRoleIdAsync(roleName);
 
     var employee = new Employee
     {
@@ -105,7 +112,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
       EmployeeCode = $"IT-{suffix}",
       Username = $"it{suffix}",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
-      Role = role,
+      LegacyRole = role,
+      RoleId = roleId,
     };
 
     if (permissions.Length > 0)
@@ -142,7 +150,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
   }
 
   // A client that is already logged in as a freshly seeded employee.
-  public async Task<HttpClient> CreateAuthorizedClientAsync(Role role = Role.User, params string[] permissions)
+  public async Task<HttpClient> CreateAuthorizedClientAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
   {
     var employee = await SeedEmployeeAsync(role, permissions);
     var token = await LoginAsync(employee.Username);
@@ -157,7 +165,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
   // Logging in costs a deliberately slow BCrypt hash plus a BCrypt check, so tests that send many
   // requests as the same kind of user share one logged-in client instead of creating a new one each time.
   // (Access tokens last 15 minutes, which is longer than a test run.)
-  public Task<HttpClient> GetClientAsync(Role role = Role.User, params string[] permissions)
+  public Task<HttpClient> GetClientAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
   {
     var key = $"{role}|{string.Join(",", permissions.Order())}";
     return _clients.GetOrAdd(key, _ => CreateAuthorizedClientAsync(role, permissions));

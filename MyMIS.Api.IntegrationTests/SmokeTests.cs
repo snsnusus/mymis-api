@@ -74,7 +74,7 @@ public class SmokeTests(ApiFactory factory)
   public async Task PostOffice_LoggedInWithoutThePermission_Returns403()
   {
     // Arrange
-    using var client = await factory.CreateAuthorizedClientAsync(Role.User);
+    using var client = await factory.CreateAuthorizedClientAsync(LegacyRole.User);
 
     // Act
     var response = await client.PostAsJsonAsync("/api/Offices", NewOffice(Guid.NewGuid().ToString("N")[..8]));
@@ -88,7 +88,7 @@ public class SmokeTests(ApiFactory factory)
   {
     // Arrange
     var suffix = Guid.NewGuid().ToString("N")[..8];
-    using var client = await factory.CreateAuthorizedClientAsync(Role.User, "offices.manage");
+    using var client = await factory.CreateAuthorizedClientAsync(LegacyRole.User, "offices.manage");
 
     // Act
     var response = await client.PostAsJsonAsync("/api/Offices", NewOffice(suffix));
@@ -105,7 +105,7 @@ public class SmokeTests(ApiFactory factory)
   public async Task PostOffice_AsSuperAdminWithoutAnyPermission_IsAllowed()
   {
     // Arrange: SuperAdmin bypasses every permission check
-    using var client = await factory.CreateAuthorizedClientAsync(Role.SuperAdmin);
+    using var client = await factory.CreateAuthorizedClientAsync(LegacyRole.SuperAdmin);
 
     // Act
     var response = await client.PostAsJsonAsync("/api/Offices", NewOffice(Guid.NewGuid().ToString("N")[..8]));

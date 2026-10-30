@@ -56,7 +56,7 @@ public class ApiConflictTests(ApiFactory factory)
   // A logged-in client whose employee belongs to the given department (the token carries a departmentId claim).
   private async Task<HttpClient> ClientInDepartmentAsync(int departmentId, params string[] permissions)
   {
-    var employee = await factory.SeedEmployeeAsync(Role.User, permissions);
+    var employee = await factory.SeedEmployeeAsync(LegacyRole.User, permissions);
 
     await factory.ExecuteDbAsync(async db =>
       await db.Employees
@@ -76,7 +76,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostPosition_SameSlugInTheSameDepartment_Returns409()
   {
     // Arrange: positions have no pre-check, so this 409 can only come from the index and the filter
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var department = await factory.SeedDepartmentAsync();
     var slug = $"P{Unique()}";
 
@@ -94,7 +94,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostPosition_SameSlugInAnotherDepartment_IsAllowed()
   {
     // Arrange: the index is per department, not company-wide
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var slug = $"P{Unique()}";
     var firstDepartment = await factory.SeedDepartmentAsync();
     var secondDepartment = await factory.SeedDepartmentAsync();
@@ -113,7 +113,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostCity_SameNameInTheSameRegion_Returns409()
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var region = await factory.SeedRegionAsync();
     var city = new { name = $"City {Unique()}", regionId = region.Id };
 
@@ -130,7 +130,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostCity_SameNameInAnotherRegion_IsAllowed()
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var name = $"City {Unique()}";
     var firstRegion = await factory.SeedRegionAsync();
     var secondRegion = await factory.SeedRegionAsync();
@@ -150,7 +150,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostBarangay_SameNameInTheSameCity_Returns409()
   {
     // Arrange
-    var client = await factory.GetClientAsync(Role.SuperAdmin);
+    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
     var city = await factory.SeedCityAsync(await factory.SeedRegionAsync());
     var barangay = new { name = $"Barangay {Unique()}", cityId = city.Id };
 

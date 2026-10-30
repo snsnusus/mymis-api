@@ -30,65 +30,68 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Position> Positions => Set<Position>();
   public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
   public DbSet<Region> Regions => Set<Region>();
+  public DbSet<Role> Roles => Set<Role>();
+  public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
     base.OnModelCreating(modelBuilder);
 
-    modelBuilder.Entity<Department>()
-      .HasOne(d => d.PrimaryContact)
-      .WithMany()
-      .HasForeignKey(d => d.PrimaryContactId)
-      .OnDelete(DeleteBehavior.Restrict);
+    modelBuilder.Entity<Department>(entity =>
+    {
+      entity.HasOne(d => d.PrimaryContact)
+        .WithMany()
+        .HasForeignKey(d => d.PrimaryContactId)
+        .OnDelete(DeleteBehavior.Restrict);
 
-    modelBuilder.Entity<Department>()
-      .HasOne(d => d.SecondaryContact)
-      .WithMany()
-      .HasForeignKey(d => d.SecondaryContactId)
-      .OnDelete(DeleteBehavior.Restrict);
+      entity.HasOne(d => d.SecondaryContact)
+        .WithMany()
+        .HasForeignKey(d => d.SecondaryContactId)
+        .OnDelete(DeleteBehavior.Restrict);
+    });
 
-    modelBuilder.Entity<Employee>()
-      .HasQueryFilter(e => e.DeletedAt == null);
+    modelBuilder.Entity<Employee>(entity =>
+    {
+      entity.HasQueryFilter(e => e.DeletedAt == null);
 
-    modelBuilder.Entity<Employee>()
-      .Property(e => e.Role)
-      .HasConversion<string>()
-      .HasDefaultValue(Role.User);
+      entity.Property(e => e.LegacyRole)
+        .HasColumnName("Role")
+        .HasConversion<string>()
+        .HasDefaultValue(LegacyRole.User);
 
-    modelBuilder.Entity<Employee>()
-      .Property(e => e.AvatarStyle)
-      .HasConversion<string>()
-      .HasMaxLength(20);
+      entity.Property(e => e.AvatarStyle)
+        .HasConversion<string>()
+        .HasMaxLength(20);
 
-    modelBuilder.Entity<Employee>()
-      .HasIndex(e => e.Username, "IX_Employees_Username")
-      .IsUnique()
-      .HasFilter("\"DeletedAt\" IS NULL");
+      entity.HasIndex(e => e.Username, "IX_Employees_Username")
+        .IsUnique()
+        .HasFilter("\"DeletedAt\" IS NULL");
 
-    modelBuilder.Entity<Employee>()
-      .HasIndex(e => e.EmployeeCode)
-      .IsUnique();
+      entity.HasIndex(e => e.EmployeeCode)
+        .IsUnique();
 
-    modelBuilder.Entity<Employee>()
-      .HasOne(e => e.PersonalDetail)
-      .WithOne(pd => pd.Employee)
-      .HasForeignKey<EmployeePersonalDetail>(pd => pd.EmployeeId);
+      entity.HasOne(e => e.PersonalDetail)
+        .WithOne(pd => pd.Employee)
+        .HasForeignKey<EmployeePersonalDetail>(pd => pd.EmployeeId);
 
-    modelBuilder.Entity<Employee>()
-      .HasOne(e => e.Position)
-      .WithMany()
-      .HasForeignKey(e => e.PositionId)
-      .OnDelete(DeleteBehavior.SetNull);
+      entity.HasOne(e => e.Position)
+        .WithMany()
+        .HasForeignKey(e => e.PositionId)
+        .OnDelete(DeleteBehavior.SetNull);
 
-    modelBuilder.Entity<Employee>()
-      .Property(e => e.EmployeeType)
-      .HasConversion<string>()
-      .HasMaxLength(20);
+      entity.Property(e => e.EmployeeType)
+        .HasConversion<string>()
+        .HasMaxLength(20);
 
-    modelBuilder.Entity<Employee>()
-      .Property(e => e.EmploymentStatus)
-      .HasConversion<string>()
-      .HasMaxLength(20);
+      entity.Property(e => e.EmploymentStatus)
+        .HasConversion<string>()
+        .HasMaxLength(20);
+
+      entity.HasOne(e => e.Role)
+        .WithMany()
+        .HasForeignKey(e => e.RoleId)
+        .OnDelete(DeleteBehavior.Restrict);
+    });
 
     modelBuilder.Entity<EmployeeAddress>(entity =>
       {
@@ -183,68 +186,71 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .HasIndex(r => r.TokenHash)
       .IsUnique();
 
-    modelBuilder.Entity<EmployeeHobby>()
-      .HasKey(eh => new { eh.EmployeeId, eh.HobbyId });
+    modelBuilder.Entity<EmployeeHobby>(entity =>
+    {
+      entity.HasKey(eh => new { eh.EmployeeId, eh.HobbyId });
 
-    modelBuilder.Entity<EmployeeHobby>()
-      .HasOne(eh => eh.Employee)
-      .WithMany(e => e.EmployeeHobbies)
-      .HasForeignKey(eh => eh.EmployeeId);
+      entity.HasOne(eh => eh.Employee)
+        .WithMany(e => e.EmployeeHobbies)
+        .HasForeignKey(eh => eh.EmployeeId);
 
-    modelBuilder.Entity<EmployeeHobby>()
-      .HasOne(eh => eh.Hobby)
-      .WithMany(h => h.EmployeeHobbies)
-      .HasForeignKey(eh => eh.HobbyId);
+      entity.HasOne(eh => eh.Hobby)
+        .WithMany(h => h.EmployeeHobbies)
+        .HasForeignKey(eh => eh.HobbyId);
+    });
 
-    modelBuilder.Entity<EmployeePermission>()
-      .HasKey(ep => new { ep.EmployeeId, ep.PermissionId });
+    modelBuilder.Entity<EmployeePermission>(entity =>
+    {
+      entity.HasKey(ep => new { ep.EmployeeId, ep.PermissionId });
 
-    modelBuilder.Entity<EmployeePermission>()
-      .HasOne(ep => ep.Employee)
-      .WithMany(e => e.EmployeePermissions)
-      .HasForeignKey(ep => ep.EmployeeId);
+      entity.HasOne(ep => ep.Employee)
+        .WithMany(e => e.EmployeePermissions)
+        .HasForeignKey(ep => ep.EmployeeId);
 
-    modelBuilder.Entity<EmployeePermission>()
-      .HasOne(ep => ep.Permission)
-      .WithMany()
-      .HasForeignKey(ep => ep.PermissionId);
+      entity.HasOne(ep => ep.Permission)
+        .WithMany()
+        .HasForeignKey(ep => ep.PermissionId);
+    });
 
     modelBuilder.Entity<Permission>()
       .HasIndex(p => p.Name)
       .IsUnique();
 
-    modelBuilder.Entity<Position>()
-      .HasOne(p => p.Department)
-      .WithMany()
-      .HasForeignKey(p => p.DepartmentId)
-      .OnDelete(DeleteBehavior.Restrict);
+    modelBuilder.Entity<Position>(entity =>
+    {
+      entity.HasOne(p => p.Department)
+        .WithMany()
+        .HasForeignKey(p => p.DepartmentId)
+        .OnDelete(DeleteBehavior.Restrict);
 
-    modelBuilder.Entity<Position>()
-      .HasIndex(p => new { p.DepartmentId, p.Slug }).IsUnique();
+      entity.HasIndex(p => new { p.DepartmentId, p.Slug }).IsUnique();
+    });
 
     modelBuilder.Entity<Hobby>()
       .HasIndex(h => h.NormalizedName)
       .IsUnique();
 
-    modelBuilder.Entity<City>()
-      .HasOne(c => c.Region)
-      .WithMany()
-      .HasForeignKey(c => c.RegionId)
-      .OnDelete(DeleteBehavior.Restrict);
+    modelBuilder.Entity<City>(entity =>
+    {
+      entity.HasOne(c => c.Region)
+        .WithMany()
+        .HasForeignKey(c => c.RegionId)
+        .OnDelete(DeleteBehavior.Restrict);
 
-    modelBuilder.Entity<City>()
-      .HasIndex(c => new { c.RegionId, c.Name })
-      .IsUnique();
+      entity.HasIndex(c => new { c.RegionId, c.Name })
+        .IsUnique();
+    });
 
-    modelBuilder.Entity<Barangay>()
-      .HasOne(b => b.City)
-      .WithMany()
-      .HasForeignKey(b => b.CityId)
-      .OnDelete(DeleteBehavior.Restrict);
+    modelBuilder.Entity<Barangay>(entity =>
+    {
+      entity.HasOne(b => b.City)
+        .WithMany()
+        .HasForeignKey(b => b.CityId)
+        .OnDelete(DeleteBehavior.Restrict);
 
-    modelBuilder.Entity<Barangay>()
-      .HasIndex(b => new { b.CityId, b.Name })
-      .IsUnique();
+      entity.HasIndex(b => new { b.CityId, b.Name })
+        .IsUnique();
+    });
 
     modelBuilder.Entity<Office>()
       .HasIndex(o => o.NormalizedName)
@@ -322,36 +328,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       .StartsAt(1)
       .IncrementsBy(1);
 
-    // Employee HMO
     modelBuilder.Entity<EmployeeHmo>(entity =>
     {
       entity.HasOne<Employee>()
-      .WithMany(e => e.HmoEnrollments)
-      .HasForeignKey(h => h.EmployeeId)
-      .OnDelete(DeleteBehavior.Cascade);
+        .WithMany(e => e.HmoEnrollments)
+        .HasForeignKey(h => h.EmployeeId)
+        .OnDelete(DeleteBehavior.Cascade);
 
       entity.HasOne(h => h.HmoProvider)
-      .WithMany()
-      .HasForeignKey(h => h.HmoProviderId)
-      .OnDelete(DeleteBehavior.Restrict);
+        .WithMany()
+        .HasForeignKey(h => h.HmoProviderId)
+        .OnDelete(DeleteBehavior.Restrict);
 
       entity.HasOne(h => h.HmoPlan)
-      .WithMany()
-      .HasForeignKey(h => h.HmoPlanId)
-      .OnDelete(DeleteBehavior.Restrict);
+        .WithMany()
+        .HasForeignKey(h => h.HmoPlanId)
+        .OnDelete(DeleteBehavior.Restrict);
 
       entity.Property(h => h.MemberNumber)
-      .HasMaxLength(50);
+        .HasMaxLength(50);
 
       entity.HasIndex(h => h.EmployeeId, "IX_EmployeeHmos_EmployeeId");
 
       entity.HasIndex(h => h.EmployeeId, "IX_EmployeeHmos_EmployeeId_Active")
-      .IsUnique()
-      .HasFilter("\"DeletedAt\" IS NULL");
+        .IsUnique()
+        .HasFilter("\"DeletedAt\" IS NULL");
 
       entity.HasIndex(h => new { h.HmoProviderId, h.MemberNumber }, "IX_EmployeeHmos_HmoProviderId_MemberNumber")
-      .IsUnique()
-      .HasFilter("\"DeletedAt\" IS NULL");
+        .IsUnique()
+        .HasFilter("\"DeletedAt\" IS NULL");
 
       entity.HasQueryFilter(h => h.DeletedAt == null);
     });
@@ -359,14 +364,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<EmployeeHmoDependent>(entity =>
     {
       entity.HasOne<EmployeeHmo>()
-      .WithMany(h => h.Dependents)
-      .HasForeignKey(d => d.EmployeeHmoId)
-      .OnDelete(DeleteBehavior.Cascade);
+        .WithMany(h => h.Dependents)
+        .HasForeignKey(d => d.EmployeeHmoId)
+        .OnDelete(DeleteBehavior.Cascade);
 
       entity.HasOne(d => d.HmoPlan)
-      .WithMany()
-      .HasForeignKey(d => d.HmoPlanId)
-      .OnDelete(DeleteBehavior.Restrict);
+        .WithMany()
+        .HasForeignKey(d => d.HmoPlanId)
+        .OnDelete(DeleteBehavior.Restrict);
 
       entity.Property(d => d.FirstName).HasMaxLength(100);
 
@@ -389,9 +394,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
       // 1:1 — the dependent side (this table) holds the FK.
       entity.HasOne(g => g.Employee)
-            .WithOne(e => e.GovernmentId)
-            .HasForeignKey<EmployeeGovernmentId>(g => g.EmployeeId)
-            .OnDelete(DeleteBehavior.Cascade);
+        .WithOne(e => e.GovernmentId)
+        .HasForeignKey<EmployeeGovernmentId>(g => g.EmployeeId)
+        .OnDelete(DeleteBehavior.Cascade);
 
       // One partial unique index per number: uniqueness only among active rows.
       entity.HasIndex(g => g.SssNumber).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
@@ -404,5 +409,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         .HasForeignKey(g => g.UpdatedById)
         .OnDelete(DeleteBehavior.Restrict);
     });
+
+    modelBuilder.Entity<Role>()
+      .HasIndex(r => r.NormalizedName)
+      .IsUnique();
+
+    modelBuilder.Entity<RolePermission>(entity =>
+    {
+      entity.HasKey(rp => new { rp.RoleId, rp.PermissionId });
+
+      entity.HasOne(rp => rp.Role)
+        .WithMany(r => r.RolePermissions)
+        .HasForeignKey(rp => rp.RoleId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(rp => rp.Permission)
+        .WithMany()
+        .HasForeignKey(rp => rp.PermissionId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.Property(rp => rp.Scope)
+        .HasConversion<string>()
+        .HasMaxLength(20);
+    });
+
+
   }
 }

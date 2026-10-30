@@ -15,7 +15,7 @@ public class MustChangePasswordTests(ApiFactory factory)
 
   private const string NewPassword = "My-New-Password-123!";
 
-  private async Task<Employee> SeedFlaggedEmployeeAsync(Role role = Role.User, params string[] permissions)
+  private async Task<Employee> SeedFlaggedEmployeeAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
   {
     var employee = await factory.SeedEmployeeAsync(role, permissions);
 
@@ -31,7 +31,7 @@ public class MustChangePasswordTests(ApiFactory factory)
   public async Task FlaggedUser_CallingAProtectedRoute_Gets403WithPasswordChangeRequiredCode()
   {
     // Arrange
-    var employee = await SeedFlaggedEmployeeAsync(Role.User);
+    var employee = await SeedFlaggedEmployeeAsync(LegacyRole.User);
     using var client = await factory.CreateClientForAsync(employee);
 
     // Act
@@ -48,7 +48,7 @@ public class MustChangePasswordTests(ApiFactory factory)
   public async Task FlaggedUser_CallingAProtectedRoute_Gets403EvenWithPermission()
   {
     // Arrange
-    var employee = await SeedFlaggedEmployeeAsync(Role.User, "employees.create");
+    var employee = await SeedFlaggedEmployeeAsync(LegacyRole.User, "employees.create");
     using var client = await factory.CreateClientForAsync(employee);
 
     // Act
@@ -65,7 +65,7 @@ public class MustChangePasswordTests(ApiFactory factory)
   public async Task FlaggedUser_CallingChangePassword_IsAllowedThrough()
   {
     // Arrange
-    var employee = await SeedFlaggedEmployeeAsync(Role.User);
+    var employee = await SeedFlaggedEmployeeAsync(LegacyRole.User);
     using var client = await factory.CreateClientForAsync(employee);
 
     // Act
@@ -79,7 +79,7 @@ public class MustChangePasswordTests(ApiFactory factory)
   public async Task FlaggedUser_AfterChangingPasswordAndLoggingInAgain_IsNoLongerBlocked()
   {
     // Arrange
-    var employee = await SeedFlaggedEmployeeAsync(Role.User);
+    var employee = await SeedFlaggedEmployeeAsync(LegacyRole.User);
     using var client = await factory.CreateClientForAsync(employee);
     var changePasswordResponse = await client.PostAsJsonAsync("/api/Auth/change-password", new { currentPassword = ApiFactory.DefaultPassword, newPassword = NewPassword });
     Assert.Equal(HttpStatusCode.NoContent, changePasswordResponse.StatusCode);

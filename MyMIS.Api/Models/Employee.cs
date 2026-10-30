@@ -6,6 +6,10 @@ public class Employee
 {
   public int Id { get; set; }
 
+  public int RoleId { get; set; }
+
+  public Role Role { get; set; } = null!;
+
   [Required]
   [MaxLength(100)]
   public string FirstName { get; set; } = string.Empty;
@@ -41,7 +45,7 @@ public class Employee
 
   public string? AvatarThumbnailUrl { get; set; }
 
-  public Role Role { get; set; } = Role.User;
+  public LegacyRole LegacyRole { get; set; } = LegacyRole.User;
 
   public required string EmployeeCode { get; set; } // was "employeeId" in your JSON
 

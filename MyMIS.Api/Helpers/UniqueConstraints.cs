@@ -45,5 +45,8 @@ public static class UniqueConstraints
       ["IX_EmployeeGovernmentIds_PagIbigNumber"] = ("PagIbigNumber", "This Pag-IBIG number is already used by another employee."),
       ["IX_EmployeeGovernmentIds_TinNumber"] = ("TinNumber", "This TIN is already used by another employee."),
       ["IX_EmployeeGovernmentIds_EmployeeId"] = ("GovernmentIds", "These government IDs changed while saving. Please try again."),
+
+      // Role
+      ["IX_Roles_NormalizedName"] = ("Name", "A role with this name already exists."),
     };
 }

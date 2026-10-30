@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using Microsoft.EntityFrameworkCore;
+using MyMIS.Api.Data;
 using MyMIS.Api.Models;
 
 namespace MyMIS.Api.IntegrationTests.Infrastructure;
@@ -103,4 +105,16 @@ public static class TestData
     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
     return client;
   }
+
+  // Looks up a seeded system role's id by its normalized name.
+  // `this AppDbContext db` makes it an extension method, so tests can call
+  // db.GetRoleIdAsync(...) as if it were built into the DbContext.
+  // That's the same trick as the existing `this ApiFactory factory` helpers here.
+  public static async Task<int> GetRoleIdAsync(this AppDbContext db, string normalizedName) =>
+    await db.Roles
+      .Where(r => r.NormalizedName == normalizedName)
+      .Select(r => (int?)r.Id)
+      .FirstOrDefaultAsync()
+    ?? throw new InvalidOperationException(
+      $"The system role '{normalizedName}' is missing. Have the migrations been applied?");
 }
