@@ -97,12 +97,6 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     using var scope = Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    var roleName = role == LegacyRole.SuperAdmin
-      ? SystemRoleNames.SuperAdmin
-      : SystemRoleNames.Employee;
-
-    var roleId = await db.GetRoleIdAsync(roleName);
-
     var employee = new Employee
     {
       FirstName = "Test",
@@ -113,10 +107,17 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
       Username = $"it{suffix}",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
       LegacyRole = role,
-      RoleId = roleId,
     };
 
-    if (permissions.Length > 0)
+    if (role == LegacyRole.SuperAdmin)
+    {
+      employee.RoleId = await db.GetRoleIdAsync(SystemRoleNames.SuperAdmin);
+    }
+    else if (permissions.Length == 0)
+    {
+      employee.RoleId = await db.GetRoleIdAsync(SystemRoleNames.Employee);
+    }
+    else
     {
       var found = await db.Permissions.Where(p => permissions.Contains(p.Name)).ToListAsync();
       var missing = permissions.Except(found.Select(p => p.Name)).ToList();
@@ -127,10 +128,22 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
           $"These permissions are not seeded by the migrations: {string.Join(", ", missing)}");
       }
 
-      foreach (var permission in found)
+      var now = DateTime.UtcNow;
+
+      var testRole = new Role
       {
-        employee.EmployeePermissions.Add(new EmployeePermission { PermissionId = permission.Id });
-      }
+        Name = $"Test {suffix}",
+        NormalizedName = $"TEST {suffix}".ToUpperInvariant(),
+        CreatedAt = now,
+        UpdatedAt = now,
+        RolePermissions = [.. found.Select(permission => new RolePermission
+        {
+          Permission = permission,
+          Scope = PermissionScope.Company,
+        })],
+      };
+
+      employee.Role = testRole;
     }
 
     db.Employees.Add(employee);

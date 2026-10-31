@@ -26,6 +26,9 @@ var awsOptions = builder.Configuration.GetSection("Aws").Get<S3Options>()
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
   ?? throw new InvalidOperationException("Jwt configuration section is missing.");
 
+// In-process key/value cache with expiry (a Map with TTLs). Used by RolePermissionCache.
+builder.Services.AddMemoryCache();
+
 builder.Services.AddControllers(options =>
 {
   // Turns unique-index violations from any controller action into a 409 (see Helpers/UniqueConstraints.cs).
@@ -62,8 +65,23 @@ builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddScoped<IEmployeeCodeGenerator, EmployeeCodeGenerator>();
 builder.Services.AddScoped<IAuthorizationHandler, DepartmentScopeHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, SameDepartmentHandler>();
+
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+
+builder.Services.AddSingleton<IAmazonS3>(_ =>
+{
+  var credentials = new BasicAWSCredentials(awsOptions.AccessKey, awsOptions.SecretKey);
+  var config = new AmazonS3Config
+  {
+    RegionEndpoint = RegionEndpoint.GetBySystemName(awsOptions.Region)
+  };
+  return new AmazonS3Client(credentials, config);
+});
+
+// Singleton: one shared cache for the whole app. PermissionHandler (also a
+// singleton) receives it through its constructor.
+builder.Services.AddSingleton<IRolePermissionCache, RolePermissionCache>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -98,25 +116,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     };
   });
 
-builder.Services.AddAuthorizationBuilder()
+// Keep the builder in a variable so we can keep adding policies after the chain.
+var authorization = builder.Services.AddAuthorizationBuilder()
+  // Department handlers: still used by Departments/Employees/Positions
+  // controllers until Step 6 replaces them with scoped permissions.
   .AddPolicy("DepartmentScope", policy =>
     policy.Requirements.Add(new DepartmentScopeRequirement()))
   .AddPolicy("SameDepartment", policy =>
     policy.Requirements.Add(new SameDepartmentRequirement()))
-  .AddPolicy("employees.create", policy =>
-    policy.Requirements.Add(new PermissionRequirement("employees.create")))
-  .AddPolicy("employees.update", policy =>
-    policy.Requirements.Add(new PermissionRequirement("employees.update")))
+  // Legacy *.manage policies: controllers still reference them until Step 6
+  // switches to the CRUD names. SuperAdmin passes them because the cache
+  // gives a system role every row in Permissions, including these.
   .AddPolicy("hmo.manage", policy =>
     policy.Requirements.Add(new PermissionRequirement("hmo.manage")))
   .AddPolicy("locations.manage", policy =>
     policy.Requirements.Add(new PermissionRequirement("locations.manage")))
   .AddPolicy("offices.manage", policy =>
-    policy.Requirements.Add(new PermissionRequirement("offices.manage")))
-  .AddPolicy("positions.create", policy =>
-    policy.Requirements.Add(new PermissionRequirement("positions.create")))
-  .AddPolicy("positions.update", policy =>
-    policy.Requirements.Add(new PermissionRequirement("positions.update")));
+    policy.Requirements.Add(new PermissionRequirement("offices.manage")));
+
+// One policy per catalog permission, named exactly like the permission.
+// [Authorize(Policy = "employees.update")] finds the policy by that name.
+foreach (var permission in PermissionNames.All)
+{
+  authorization.AddPolicy(permission, policy =>
+    policy.Requirements.Add(new PermissionRequirement(permission)));
+}
 
 builder.Services.AddCors(options =>
 {
@@ -126,16 +150,6 @@ builder.Services.AddCors(options =>
       .AllowAnyHeader()
       .AllowAnyMethod();
   });
-});
-
-builder.Services.AddSingleton<IAmazonS3>(_ =>
-{
-  var credentials = new BasicAWSCredentials(awsOptions.AccessKey, awsOptions.SecretKey);
-  var config = new AmazonS3Config
-  {
-    RegionEndpoint = RegionEndpoint.GetBySystemName(awsOptions.Region)
-  };
-  return new AmazonS3Client(credentials, config);
 });
 
 var app = builder.Build();

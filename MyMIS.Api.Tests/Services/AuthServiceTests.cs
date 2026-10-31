@@ -349,9 +349,8 @@ public class AuthServiceTests : IDisposable
   [Fact]
   public async Task RefreshAsync_ValidToken_ReturnsNewTokens()
   {
-
-    const string rawToken = "original-refresh-token";
     // Arrange
+    const string rawToken = "original-refresh-token";
     var employee = new Employee
     {
       FirstName = "David",
@@ -666,5 +665,76 @@ public class AuthServiceTests : IDisposable
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
     return employee;
+  }
+
+  [Fact]
+  public async Task LoginAsync_ValidToken_AccessTokenCarriesRoleId()
+  {
+    // Arrange
+    var employee = new Employee
+    {
+      FirstName = "John",
+      LastName = "Doe",
+      Username = "johndoe",
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      EmployeeCode = "E-2026-050",
+      PasswordHash = BCrypt.Net.BCrypt.HashPassword("johndoe"),
+      LegacyRole = LegacyRole.User,
+      RoleId = 7,
+    };
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.LoginAsync(new LoginDto { Username = "johndoe", Password = "johndoe" });
+
+    // Assert
+    Assert.NotNull(result);
+
+    var claim = GetClaim(result.AccessToken, "roleId");
+    Assert.Equal("7", claim?.Value);
+  }
+
+  [Fact]
+  public async Task RefreshAsync_ValidToken_NewAccessTokenCarriesRoleId()
+  {
+    // Arrange
+    const string rawToken = "original-refresh-token";
+    var employee = new Employee
+    {
+      FirstName = "David",
+      LastName = "Green",
+      Gender = "MALE",
+      MaritalStatus = "SINGLE",
+      EmployeeCode = "EMP005",
+      Username = "davidgreen",
+      PasswordHash = BCrypt.Net.BCrypt.HashPassword("davidgreen"),
+      LegacyRole = LegacyRole.User,
+      RoleId = 7,
+    };
+
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var originalRefreshToken = new RefreshToken
+    {
+      TokenHash = _tokenService.HashToken(rawToken),
+      EmployeeId = employee.Id,
+      ExpiresAt = DateTime.UtcNow.AddDays(7),
+      RevokedAt = null,
+    };
+
+    _context.RefreshTokens.Add(originalRefreshToken);
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.RefreshAsync(new RefreshRequestDto { RefreshToken = rawToken });
+
+    // Assert
+    Assert.NotNull(result);
+
+    var claim = GetClaim(result.AccessToken, "roleId");
+    Assert.Equal("7", claim?.Value);
   }
 }

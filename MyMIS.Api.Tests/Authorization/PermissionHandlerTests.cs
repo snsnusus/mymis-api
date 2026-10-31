@@ -1,100 +1,265 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Moq;
 using MyMIS.Api.Authorization;
+using MyMIS.Api.Models;
 using Xunit;
+
 
 namespace MyMIS.Api.Tests.Authorization;
 
 public class PermissionHandlerTests
 {
-    private readonly PermissionHandler _handler = new();
+  // The role id every test's fake user carries. Any number works: the fake
+  // cache is set up to answer for exactly this id.
+  private const int RoleId = 3;
+  private const int CallerDepartmentId = 9;
 
-    private static ClaimsPrincipal BuildUser(string? role, params string[] permissions)
+  // Builds a handler whose fake cache says "role 3 holds exactly these permissions".
+  // `params` lets callers write HandlerWith(("employees.update", PermissionScope.Department))
+  // with any number of (name, scope) pairs, or none at all.
+  private static PermissionHandler HandlerWith(params (string Name, PermissionScope Scope)[] permissions)
+  {
+    // A tuple array → dictionary: name is the key, scope is the value.
+    var dictionary = permissions.ToDictionary(p => p.Name, p => p.Scope);
+
+    var cache = new Mock<IRolePermissionCache>();
+    cache
+      .Setup(c => c.GetAsync(RoleId))
+      .ReturnsAsync(dictionary);
+
+    return new PermissionHandler(cache.Object);
+  }
+
+  // Same idea as SameDepartmentHandlerTests.BuildUser, with the new claim names.
+  private static ClaimsPrincipal BuildUser(string? roleId, string? departmentId = null)
+  {
+    var claims = new List<Claim>();
+
+    if (roleId is not null)
     {
-        var claims = new List<Claim>();
-
-        if (role is not null)
-            claims.Add(new Claim("role", role));
-
-        foreach (var permission in permissions)
-            claims.Add(new Claim("permission", permission));
-
-        var identity = new ClaimsIdentity(claims, "TestAuthType");
-        return new ClaimsPrincipal(identity);
+      claims.Add(new Claim("roleId", roleId));
     }
 
-    [Fact]
-    public async Task HandleAsync_SuperAdminRole_SucceedsRegardlessOfPermission()
+    if (departmentId is not null)
     {
-        var context = new AuthorizationHandlerContext(
-            [new PermissionRequirement("employees.create")],
-            BuildUser("SuperAdmin"),
-            resource: null
-        );
-
-        await _handler.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
+      claims.Add(new Claim("departmentId", departmentId));
     }
 
-    [Fact]
-    public async Task HandleAsync_UserRole_WithMatchingPermission_Succeeds()
-    {
-        var context = new AuthorizationHandlerContext(
-            [new PermissionRequirement("employees.create")],
-            BuildUser("User", "employees.update", "employees.create"),
-            resource: null
-        );
+    return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuthType"));
+  }
 
-        await _handler.HandleAsync(context);
+  [Fact]
+  public async Task HandleAsync_NoRoleIdClaim_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Company));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(null),
+      resource: null);
 
-        Assert.True(context.HasSucceeded);
-    }
+    // Act
+    await handler.HandleAsync(context);
 
-    [Fact]
-    public async Task HandleAsync_UserRole_WithoutMatchingPermission_Fails()
-    {
-        var context = new AuthorizationHandlerContext(
-            [new PermissionRequirement("employees.create")],
-            BuildUser("User", "employees.update"),   // holds a permission, just not this one
-            resource: null
-        );
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
 
-        await _handler.HandleAsync(context);
+  [Fact]
+  public async Task HandleAsync_LegacySuperAdminRoleClaimOnly_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith();
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.create")],
+      new ClaimsPrincipal(new ClaimsIdentity([new Claim("role", "SuperAdmin")], "TestAuthType")),
+      resource: null);
 
-        Assert.False(context.HasSucceeded);
-    }
+    // Act
+    await handler.HandleAsync(context);
 
-    [Fact]
-    public async Task HandleAsync_UserRole_NoPermissionsAtAll_Fails()
-    {
-        var context = new AuthorizationHandlerContext(
-            [new PermissionRequirement("employees.create")],
-            BuildUser("User"),
-            resource: null
-        );
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
 
-        await _handler.HandleAsync(context);
+  [Fact]
+  public async Task HandleAsync_RoleLacksPermission_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Company));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.create")],
+      BuildUser(RoleId.ToString()),
+      resource: null);
 
-        Assert.False(context.HasSucceeded);
-    }
+    // Act
+    await handler.HandleAsync(context);
 
-    [Fact]
-    public async Task HandleAsync_AdminRole_WithoutMatchingPermission_Fails()
-    {
-        // This is the intentional breaking change flagged earlier: Admin gets
-        // no automatic bypass the way SuperAdmin does. Admin-without-the-
-        // permission must fail, exactly like a plain User would.
-        var context = new AuthorizationHandlerContext(
-            [new PermissionRequirement("employees.create")],
-            BuildUser("Admin"),
-            resource: null
-        );
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
 
-        await _handler.HandleAsync(context);
+  [Fact]
+  public async Task HandleAsync_RoleHasNoPermissions_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith();
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString()),
+      resource: null
+    );
 
-        Assert.False(context.HasSucceeded);
-    }
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_RoleHasPermission_NoResource_Succeeds()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Company));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString()),
+      resource: null
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.True(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_DepartmentScopedPermission_AttributeGate_Succeeds()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Department));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString(), CallerDepartmentId.ToString()),
+      resource: new DefaultHttpContext()
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.True(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_CompanyScope_AnyDepartment_Succeeds()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Company));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString(), CallerDepartmentId.ToString()),
+      resource: 5
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.True(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_DepartmentScope_SameDepartment_Succeeds()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Department));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString(), CallerDepartmentId.ToString()),
+      resource: CallerDepartmentId
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.True(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_DepartmentScope_OtherDepartment_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Department));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString(), CallerDepartmentId.ToString()),
+      resource: 5
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_DepartmentScope_CallerHasNoDepartment_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Department));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString()),
+      resource: CallerDepartmentId
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_UnexpectedResourceType_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Company));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString(), CallerDepartmentId.ToString()),
+      resource: "oops"
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
+
+  [Fact]
+  public async Task HandleAsync_DepartmentScope_UnassignedTarget_Fails()
+  {
+    // Arrange
+    var handler = HandlerWith(("employees.update", PermissionScope.Department));
+    var context = new AuthorizationHandlerContext(
+      [new PermissionRequirement("employees.update")],
+      BuildUser(RoleId.ToString(), CallerDepartmentId.ToString()),
+      resource: -1
+    );
+
+    // Act
+    await handler.HandleAsync(context);
+
+    // Assert
+    Assert.False(context.HasSucceeded);
+  }
 }
-
-
