@@ -24,7 +24,8 @@ public class EmployeesController(
   EmployeeHmoService employeeHmoService,
   EmployeePhoneService employeePhoneService,
   IAuthorizationService authorizationService,
-  EmployeeAccessGuard employeeAccessGuard
+  EmployeeAccessGuard employeeAccessGuard,
+  RoleAssignmentService roleAssignmentService
 ) : ControllerBase
 {
   private readonly EmployeeService _employeeService = employeeService;
@@ -35,6 +36,7 @@ public class EmployeesController(
   private readonly EmployeePhoneService _employeePhoneService = employeePhoneService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
   private readonly EmployeeAccessGuard _access = employeeAccessGuard;
+  private readonly RoleAssignmentService _roleAssignmentService = roleAssignmentService;
 
   [Authorize]
   [HttpGet]
@@ -94,6 +96,27 @@ public class EmployeesController(
     if (User.GetEmployeeId() is not int creatorId)
     {
       return Unauthorized();
+    }
+
+    // A2: an optional starting role. Omitted → the Employee role (handled in the service).
+    // Set → the creator must hold roles.assign AND pass the same rules as assigning later
+    // (the role exists, SuperAdmin only by a SuperAdmin, the escalation guard).
+    if (dto.RoleId is int requestedRoleId)
+    {
+      var canAssign = (await _authorizationService.AuthorizeAsync(User, PermissionNames.Roles.Assign)).Succeeded;
+      if (!canAssign || User.GetRoleId() is not int callerRoleId)
+      {
+        return RoleIdProblem(StatusCodes.Status403Forbidden, "You don't have permission to choose a role for a new employee.");
+      }
+
+      var roleCheck = await _roleAssignmentService.CheckCanAssignAsync(requestedRoleId, callerRoleId);
+      if (!roleCheck.IsSuccess)
+      {
+        var status = roleCheck.ErrorType == ServiceErrorType.Forbidden
+          ? StatusCodes.Status403Forbidden
+          : StatusCodes.Status400BadRequest;
+        return RoleIdProblem(status, roleCheck.ErrorMessage!);
+      }
     }
 
     var (_, contactError) = await _emergencyContactService.ValidateAsync(dto.EmergencyContact!);
@@ -408,6 +431,25 @@ public class EmployeesController(
 
     return providedBytes.Length == expectedBytes.Length
         && CryptographicOperations.FixedTimeEquals(providedBytes, expectedBytes);
+  }
+
+  // Errors about the requested starting role, in the same field-keyed shape the
+  // create form already understands (errors.RoleId), so the portal can show the
+  // message under the role picker, whether it's a 400 or a 403.
+  private ObjectResult RoleIdProblem(int status, string message)
+  {
+    var problem = new ValidationProblemDetails(new Dictionary<string, string[]>
+    {
+      ["RoleId"] = [message],
+    })
+    {
+      Status = status,
+      Title = status == StatusCodes.Status403Forbidden
+        ? "Not allowed to assign that role."
+        : "Invalid role.",
+    };
+
+    return StatusCode(status, problem);
   }
 
   // 409 in the same shape as a validation error, so the portal can show it

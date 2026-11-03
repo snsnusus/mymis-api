@@ -44,10 +44,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
     await _context.Roles.AnyAsync(r =>
       r.NormalizedName == normalizedName && (excludeId == null || r.Id != excludeId));
 
-  // Does a HELD scope cover a REQUESTED one? Company covers both; Department only Department.
-  private static bool Covers(PermissionScope held, PermissionScope requested) =>
-    held == PermissionScope.Company || requested == PermissionScope.Department;
-
   // Checks a requested permission list and, if it's acceptable, returns it as
   // permissionId → scope (ready to save). The checks, in order:
   //   400  a permission listed twice
@@ -93,7 +89,7 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
     var callerPermissions = await _rolePermissions.GetAsync(callerRoleId);
     foreach (var (name, scope) in requested)
     {
-      if (!callerPermissions.TryGetValue(name, out var held) || !Covers(held, scope))
+      if (!callerPermissions.TryGetValue(name, out var held) || !held.Covers(scope))
       {
         return ServiceResult<Dictionary<int, PermissionScope>>.Forbidden(
           $"You can't grant '{name}' ({scope}) because your own role doesn't hold it at that scope.");

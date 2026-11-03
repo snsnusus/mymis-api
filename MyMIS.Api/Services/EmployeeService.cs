@@ -235,18 +235,19 @@ public class EmployeeService(
         Nationality = dto.PersonalDetail?.Nationality,
         BloodType = dto.PersonalDetail?.BloodType,
         Religion = dto.PersonalDetail?.Religion,
-        Bio = dto.PersonalDetail?.Bio
+        Bio = dto.PersonalDetail?.Bio,
       }
     };
 
-    var employeeRoleId = await _context.Roles
+    var roleId = dto.RoleId
+      ?? await _context.Roles
         .Where(r => r.NormalizedName == SystemRoleNames.Employee)
         .Select(r => (int?)r.Id)
         .FirstOrDefaultAsync()
-        ?? throw new InvalidOperationException(
-            "The system Employee role is missing. Have the migrations been applied?");
+      ?? throw new InvalidOperationException(
+          "The system Employee role is missing. Have the migrations been applied?");
 
-    employee.RoleId = employeeRoleId;
+    employee.RoleId = roleId;
 
     if (dto.EmergencyContact is not null)
     {

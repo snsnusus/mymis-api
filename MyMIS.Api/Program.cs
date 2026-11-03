@@ -62,6 +62,7 @@ builder.Services.AddScoped<HobbyService>();
 builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<PositionService>();
 builder.Services.AddScoped<RegionService>();
+builder.Services.AddScoped<RoleAssignmentService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<S3UploadService>();
 builder.Services.AddScoped<TokenService>();
