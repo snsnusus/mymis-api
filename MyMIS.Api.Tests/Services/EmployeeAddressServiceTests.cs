@@ -58,19 +58,21 @@ public class EmployeeAddressServiceTests : IDisposable
   };
 
   private EmployeeAddressCreateDto NewDto(
-      AddressType type = AddressType.Present,
-      bool isPrimary = false,
-      int? barangayId = null) => new()
+    AddressType type = AddressType.Present,
+    bool isPrimary = false,
+    int? barangayId = null,
+    bool? showInProfile = null) => new()
+    {
+      Type = type,
+      Address = new AddressDto
       {
-        Type = type,
-        Address = new AddressDto
-        {
-          AddressLine1 = "123 Mabini St.",
-          BarangayId = barangayId ?? _barangay.Id,
-          PostalCode = "1105",
-        },
-        IsPrimary = isPrimary,
-      };
+        AddressLine1 = "123 Mabini St.",
+        BarangayId = barangayId ?? _barangay.Id,
+        PostalCode = "1105",
+      },
+      IsPrimary = isPrimary,
+      ShowInProfile = showInProfile,
+    };
 
   // Seeds an address directly, bypassing the service, so a test's starting
   // state doesn't depend on CreateAsync behaving correctly.
@@ -365,5 +367,79 @@ public class EmployeeAddressServiceTests : IDisposable
     var error = await _service.ValidateForNewEmployeeAsync([NewDto(), NewDto()]);
 
     Assert.Null(error);
+  }
+
+  // ---------- ShowInProfile (Step 9) ----------
+
+  [Fact]
+  public async Task CreateAsync_ShowInProfileOmitted_SavesVisible()
+  {
+    // Act
+    var result = await _service.CreateAsync(_juan.Id, NewDto());
+
+    // Assert
+    Assert.True(result.Value!.ShowInProfile);
+    Assert.True(Assert.Single(await SavedAddressesAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public async Task CreateAsync_ShowInProfileFalse_SavesHidden()
+  {
+    // Act
+    var result = await _service.CreateAsync(_juan.Id, NewDto(showInProfile: false));
+
+    // Assert
+    Assert.False(result.Value!.ShowInProfile);
+    Assert.False(Assert.Single(await SavedAddressesAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ShowInProfileOmitted_KeepsTheCurrentValue()
+  {
+    // Arrange: a hidden address
+    var address = await SeedAddressAsync(_juan, isPrimary: true,
+      new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    address.ShowInProfile = false;
+    await _context.SaveChangesAsync();
+
+    // Act: change the type, leave the flag out
+    var result = await _service.UpdateAsync(_juan.Id, address.Id,
+      NewDto(type: AddressType.Permanent, isPrimary: true));
+
+    // Assert
+    Assert.True(result.IsSuccess);
+    var saved = Assert.Single(await SavedAddressesAsync(_juan.Id));
+    Assert.Equal(AddressType.Permanent, saved.Type);
+    Assert.False(saved.ShowInProfile);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ShowInProfileTrue_ShowsAHiddenAddress()
+  {
+    // Arrange
+    var address = await SeedAddressAsync(_juan, isPrimary: true,
+      new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    address.ShowInProfile = false;
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.UpdateAsync(_juan.Id, address.Id,
+      NewDto(isPrimary: true, showInProfile: true));
+
+    // Assert
+    Assert.True(result.Value!.ShowInProfile);
+    Assert.True(Assert.Single(await SavedAddressesAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public void NewEntitiesForNewEmployee_EachAddressKeepsItsOwnFlag()
+  {
+    // Act
+    var entities = EmployeeAddressService.NewEntitiesForNewEmployee(
+      [NewDto(AddressType.Present, showInProfile: false), NewDto(AddressType.Permanent)]);
+
+    // Assert
+    Assert.False(entities[0].ShowInProfile);
+    Assert.True(entities[1].ShowInProfile);
   }
 }

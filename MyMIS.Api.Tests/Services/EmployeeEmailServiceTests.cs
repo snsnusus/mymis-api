@@ -48,12 +48,14 @@ public class EmployeeEmailServiceTests : IDisposable
   public static EmployeeEmailCreateDto NewDto(
     string email = "juan@example.com",
     ContactOwnership ownership = ContactOwnership.Personal,
-    bool isPrimary = false
+    bool isPrimary = false,
+    bool? showInProfile = null
   ) => new()
   {
     Ownership = ownership,
     Email = email,
     IsPrimary = isPrimary,
+    ShowInProfile = showInProfile,
   };
 
   public Task<List<EmployeeEmail>> SavedEmailsAsync(int employeeId) =>
@@ -709,5 +711,77 @@ public class EmployeeEmailServiceTests : IDisposable
     // Act + Assert
     Assert.Throws<InvalidOperationException>(
       () => EmployeeEmailService.NewEntitiesForNewEmployee(dtos));
+  }
+
+  // ---------- ShowInProfile (Step 9) ----------
+
+  [Fact]
+  public async Task CreateAsync_ShowInProfileOmitted_SavesVisible()
+  {
+    // Act
+    var result = await _service.CreateAsync(_juan.Id, NewDto());
+
+    // Assert
+    Assert.True(result.Value!.ShowInProfile);
+    Assert.True(Assert.Single(await SavedEmailsAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public async Task CreateAsync_ShowInProfileFalse_SavesHidden()
+  {
+    // Act
+    var result = await _service.CreateAsync(_juan.Id, NewDto(showInProfile: false));
+
+    // Assert
+    Assert.False(result.Value!.ShowInProfile);
+    Assert.False(Assert.Single(await SavedEmailsAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ShowInProfileOmitted_KeepsTheCurrentValue()
+  {
+    // Arrange: a hidden email
+    var email = await SeedEmailAsync(_juan, "juan@example.com", isPrimary: true, createdAt: Day(1));
+    email.ShowInProfile = false;
+    await _context.SaveChangesAsync();
+
+    // Act: same address (not a conflict with itself), new ownership, no flag
+    var result = await _service.UpdateAsync(_juan.Id, email.Id,
+      NewDto(ownership: ContactOwnership.Corporate, isPrimary: true));
+
+    // Assert
+    Assert.True(result.IsSuccess);
+    var saved = Assert.Single(await SavedEmailsAsync(_juan.Id));
+    Assert.Equal(ContactOwnership.Corporate, saved.Ownership);
+    Assert.False(saved.ShowInProfile);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ShowInProfileTrue_ShowsAHiddenEmail()
+  {
+    // Arrange
+    var email = await SeedEmailAsync(_juan, "juan@example.com", isPrimary: true, createdAt: Day(1));
+    email.ShowInProfile = false;
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.UpdateAsync(_juan.Id, email.Id,
+      NewDto(isPrimary: true, showInProfile: true));
+
+    // Assert
+    Assert.True(result.Value!.ShowInProfile);
+    Assert.True(Assert.Single(await SavedEmailsAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public void NewEntitiesForNewEmployee_EachEmailKeepsItsOwnFlag()
+  {
+    // Act
+    var entities = EmployeeEmailService.NewEntitiesForNewEmployee(
+      [NewDto("juan@example.com", showInProfile: false), NewDto("juan.cruz@example.com")]);
+
+    // Assert
+    Assert.False(entities[0].ShowInProfile);
+    Assert.True(entities[1].ShowInProfile);
   }
 }

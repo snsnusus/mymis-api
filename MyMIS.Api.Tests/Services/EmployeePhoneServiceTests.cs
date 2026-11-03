@@ -46,7 +46,8 @@ public class EmployeePhoneServiceTests : IDisposable
       string number = "+639171234567",
       string countryCode = "PH",
       ContactOwnership ownership = ContactOwnership.Personal,
-      bool isPrimary = false
+      bool isPrimary = false,
+      bool? showInProfile = null
     ) => new()
     {
       Ownership = ownership,
@@ -56,6 +57,7 @@ public class EmployeePhoneServiceTests : IDisposable
         Number = number,
       },
       IsPrimary = isPrimary,
+      ShowInProfile = showInProfile,
     };
 
   private async Task<EmployeePhone> SeedPhoneAsync(
@@ -582,5 +584,78 @@ public class EmployeePhoneServiceTests : IDisposable
 
     // Assert
     Assert.True(result.IsSuccess);
+  }
+
+  // ---------- ShowInProfile (Step 9) ----------
+
+  [Fact]
+  public async Task CreateAsync_ShowInProfileOmitted_SavesVisible()
+  {
+    // Act
+    var result = await _service.CreateAsync(_juan.Id, NewDto());
+
+    // Assert: the response and the database
+    Assert.True(result.Value!.ShowInProfile);
+    Assert.True(Assert.Single(await SavedPhonesAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public async Task CreateAsync_ShowInProfileFalse_SavesHidden()
+  {
+    // Act
+    var result = await _service.CreateAsync(_juan.Id, NewDto(showInProfile: false));
+
+    // Assert
+    Assert.False(result.Value!.ShowInProfile);
+    Assert.False(Assert.Single(await SavedPhonesAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ShowInProfileOmitted_KeepsTheCurrentValue()
+  {
+    // Arrange: a hidden phone
+    var phone = await SeedPhoneAsync(_juan, number: "+639171234567", isPrimary: true, Day(1));
+    phone.ShowInProfile = false;
+    await _context.SaveChangesAsync();
+
+    // Act: change the ownership, leave the flag out
+    // (isPrimary: true, because unmarking the primary is rejected)
+    var result = await _service.UpdateAsync(_juan.Id, phone.Id,
+      NewDto(ownership: ContactOwnership.Corporate, isPrimary: true));
+
+    // Assert
+    Assert.True(result.IsSuccess);
+    var saved = Assert.Single(await SavedPhonesAsync(_juan.Id));
+    Assert.Equal(ContactOwnership.Corporate, saved.Ownership);   // the update ran...
+    Assert.False(saved.ShowInProfile);                           // ...and kept the flag
+  }
+
+  [Fact]
+  public async Task UpdateAsync_ShowInProfileTrue_ShowsAHiddenPhone()
+  {
+    // Arrange
+    var phone = await SeedPhoneAsync(_juan, number: "+639171234567", isPrimary: true, Day(1));
+    phone.ShowInProfile = false;
+    await _context.SaveChangesAsync();
+
+    // Act
+    var result = await _service.UpdateAsync(_juan.Id, phone.Id,
+      NewDto(isPrimary: true, showInProfile: true));
+
+    // Assert
+    Assert.True(result.Value!.ShowInProfile);
+    Assert.True(Assert.Single(await SavedPhonesAsync(_juan.Id)).ShowInProfile);
+  }
+
+  [Fact]
+  public void NewEntitiesForNewEmployee_EachPhoneKeepsItsOwnFlag()
+  {
+    // Act: a hidden mobile, then a landline that leaves the flag out
+    var entities = EmployeePhoneService.NewEntitiesForNewEmployee(
+      [NewDto("+639171234567", showInProfile: false), NewDto("+63281234567")]);
+
+    // Assert: order is kept, so [0] is the mobile and [1] the landline
+    Assert.False(entities[0].ShowInProfile);
+    Assert.True(entities[1].ShowInProfile);
   }
 }
