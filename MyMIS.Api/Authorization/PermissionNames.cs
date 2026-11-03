@@ -77,11 +77,9 @@ public static class PermissionNames
     public const string Delete = "hmo-plans.delete";
   }
 
-  // Every permission in one list, for seeding (Step 3) and for
-  // registering policies in a loop (Step 5).
-  // This can't be `const`: only primitives and strings can be const,
-  // not collections. `static readonly` means "set once when the class
-  // is first used, never reassigned".
+  // Every permission in one list, for seeding and for registering policies in a loop.
+  // This can't be `const`: only primitives and strings can be const, not collections.
+  // `static readonly` means "set once when the class is first used, never reassigned".
   // `[ ... ]` is a collection expression (C# 12), the same idea as a JS array literal.
   public static readonly IReadOnlyList<string> All =
   [
@@ -120,4 +118,29 @@ public static class PermissionNames
     HmoPlans.Update,
     HmoPlans.Delete,
   ];
+
+  // Permissions that can never be granted with Department scope (decision 7):
+  // onboarding, creating departments, managing roles, and every delete.
+  // The Roles API rejects them with Department scope, which is why the
+  // endpoints behind them need no gate 2.
+  //
+  // A HashSet answers "is X in here?" in one step, like a JS Set.
+  // IReadOnlySet lets callers check membership but not add or remove.
+  public static readonly IReadOnlySet<string> CompanyOnly = new HashSet<string>
+  {
+    Employees.Create,
+    Employees.Delete,
+    Departments.Create,
+    Departments.Delete,
+    Positions.Delete,
+    Offices.Delete,
+    Locations.Delete,
+    HmoProviders.Delete,
+    HmoPlans.Delete,
+    Roles.Read,
+    Roles.Create,
+    Roles.Update,
+    Roles.Delete,
+    Roles.Assign,
+  };
 }

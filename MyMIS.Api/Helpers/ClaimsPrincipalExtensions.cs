@@ -11,4 +11,9 @@ public static class ClaimsPrincipalExtensions
     var sub = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
     return int.TryParse(sub, out var id) ? id : null;
   }
+
+  // The caller's role id from the JWT "roleId" claim (Step 4).
+  // null if the claim is missing or not a number (e.g. a token issued before Step 4).
+  public static int? GetRoleId(this ClaimsPrincipal user) =>
+    int.TryParse(user.FindFirst("roleId")?.Value, out var id) ? id : null;
 }

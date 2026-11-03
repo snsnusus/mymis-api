@@ -5,6 +5,7 @@ public enum ServiceErrorType
   NotFound,
   Validation,
   Conflict,
+  Forbidden,
 }
 
 // The outcome of a service operation: either a value, or an error type + message.
@@ -29,4 +30,7 @@ public class ServiceResult<T>
 
   public static ServiceResult<T> Conflict(string message) =>
       new() { ErrorType = ServiceErrorType.Conflict, ErrorMessage = message };
+
+  public static ServiceResult<T> Forbidden(string message) =>
+  new() { ErrorType = ServiceErrorType.Forbidden, ErrorMessage = message };
 }

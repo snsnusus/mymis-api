@@ -111,6 +111,15 @@ public class AuthorizationWiringTests(ApiFactory factory)
     { "POST",   $"/api/Employees/{Missing}/hmo/dependents", PermissionNames.Employees.Update },
     { "PUT",    $"/api/Employees/{Missing}/hmo/dependents/1", PermissionNames.Employees.Update },
     { "DELETE", $"/api/Employees/{Missing}/hmo/dependents/1", PermissionNames.Employees.Update },
+
+    // Roles and the permission catalog (all company-only, so gate 1 is the whole check)
+    { "GET",    "/api/Permissions", PermissionNames.Roles.Read },
+    { "GET",    "/api/Roles", PermissionNames.Roles.Read },
+    { "GET",    $"/api/Roles/{Missing}", PermissionNames.Roles.Read },
+    { "POST",   "/api/Roles", PermissionNames.Roles.Create },
+    { "PUT",    $"/api/Roles/{Missing}", PermissionNames.Roles.Update },
+    { "DELETE", $"/api/Roles/{Missing}", PermissionNames.Roles.Delete },
+    { "POST",   $"/api/Roles/{Missing}/clone", PermissionNames.Roles.Create },
   };
 
   // Routes that only need a login (a plain [Authorize]): self-service, the

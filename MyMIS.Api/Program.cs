@@ -48,7 +48,9 @@ builder.Services.AddScoped<BarangayService>();
 builder.Services.AddScoped<CityService>();
 builder.Services.AddScoped<DepartmentService>();
 builder.Services.AddScoped<EmergencyContactService>();
+builder.Services.AddScoped<EmployeeAccessGuard>();
 builder.Services.AddScoped<EmployeeAddressService>();
+builder.Services.AddScoped<IEmployeeCodeGenerator, EmployeeCodeGenerator>();
 builder.Services.AddScoped<EmployeeEmailService>();
 builder.Services.AddScoped<EmployeeGovernmentIdService>();
 builder.Services.AddScoped<EmployeeHmoService>();
@@ -60,11 +62,9 @@ builder.Services.AddScoped<HobbyService>();
 builder.Services.AddScoped<OfficeService>();
 builder.Services.AddScoped<PositionService>();
 builder.Services.AddScoped<RegionService>();
+builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<S3UploadService>();
 builder.Services.AddScoped<TokenService>();
-
-builder.Services.AddScoped<EmployeeAccessGuard>();
-builder.Services.AddScoped<IEmployeeCodeGenerator, EmployeeCodeGenerator>();
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
 

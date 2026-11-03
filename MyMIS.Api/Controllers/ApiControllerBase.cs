@@ -28,6 +28,7 @@ public abstract class ApiControllerBase : ControllerBase
       ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
       ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
       ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+      ServiceErrorType.Forbidden => StatusCode(StatusCodes.Status403Forbidden, new { message = result.ErrorMessage }),
       // Fail loudly if someone adds a new error type and forgets to map it here.
       _ => throw new InvalidOperationException($"Unhandled service error type: {result.ErrorType}"),
     };
