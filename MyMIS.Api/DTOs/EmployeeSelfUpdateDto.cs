@@ -4,17 +4,20 @@ namespace MyMIS.Api.DTOs;
 
 public class EmployeeSelfUpdateDto
 {
-    public string? Nickname { get; set; }
+  public string? Nickname { get; set; }
 
-    public string? Birthplace { get; set; }
+  public string? Birthplace { get; set; }
 
-    public string? Nationality { get; set; }
+  public string? Nationality { get; set; }
 
-    [MaxLength(50)]
-    public string? BloodType { get; set; }
+  [MaxLength(50)]
+  public string? BloodType { get; set; }
 
-    [MaxLength(100)]
-    public string? Religion { get; set; }
+  [MaxLength(100)]
+  public string? Religion { get; set; }
 
-    public string? Bio { get; set; }
+  public string? Bio { get; set; }
+
+  // null (not sent) = on create: visible (default); on update: keep the current value.
+  public bool? ShowInProfile { get; set; }
 }

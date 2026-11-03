@@ -13,4 +13,6 @@ public class EmployeeAddressResponseDto
   public AddressResponseDto Address { get; set; } = null!;
 
   public bool IsPrimary { get; set; }
+
+  public bool ShowInProfile { get; set; }
 }

@@ -166,7 +166,8 @@ public class EmployeeService(
         Nationality = employee.PersonalDetail.Nationality,
         BloodType = employee.PersonalDetail.BloodType,
         Religion = employee.PersonalDetail.Religion,
-        Bio = employee.PersonalDetail.Bio
+        Bio = employee.PersonalDetail.Bio,
+        ShowInProfile = employee.PersonalDetail.ShowInProfile,
       },
       Position = employee.Position is null ? null : new EmployeePositionDto
       {
@@ -236,6 +237,7 @@ public class EmployeeService(
         BloodType = dto.PersonalDetail?.BloodType,
         Religion = dto.PersonalDetail?.Religion,
         Bio = dto.PersonalDetail?.Bio,
+        ShowInProfile = dto.PersonalDetail?.ShowInProfile ?? true,
       }
     };
 
@@ -343,6 +345,13 @@ public class EmployeeService(
     employee.PersonalDetail.Religion = dto.PersonalDetail?.Religion;
     employee.PersonalDetail.Bio = dto.PersonalDetail?.Bio;
 
+    // Unlike the text fields above (omitted = cleared to null), an omitted flag
+    // keeps the current value, so an older client can't hide or show the block by accident.
+    if (dto.PersonalDetail?.ShowInProfile is bool show)
+    {
+      employee.PersonalDetail.ShowInProfile = show;
+    }
+
     await SaveChangesCheckingUsernameAsync();
     return (await GetByIdAsync(employee.Id, includePrivateDetails: true))!;
   }
@@ -362,6 +371,11 @@ public class EmployeeService(
     employee.PersonalDetail.BloodType = dto.BloodType;
     employee.PersonalDetail.Religion = dto.Religion;
     employee.PersonalDetail.Bio = dto.Bio;
+
+    if (dto.ShowInProfile is bool show)
+    {
+      employee.PersonalDetail.ShowInProfile = show;
+    }
 
     await _context.SaveChangesAsync();
     return await GetByIdAsync(employee.Id, includePrivateDetails: true);

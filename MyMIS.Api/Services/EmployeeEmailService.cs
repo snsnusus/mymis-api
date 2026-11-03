@@ -23,6 +23,7 @@ public class EmployeeEmailService(AppDbContext context)
     Ownership = ee.Ownership,
     Email = ee.Email,
     IsPrimary = ee.IsPrimary,
+    ShowInProfile = ee.ShowInProfile,
   };
 
   private async Task ClearPrimaryAsync(int employeeId)
@@ -40,7 +41,7 @@ public class EmployeeEmailService(AppDbContext context)
     await _context.SaveChangesAsync();
   }
 
-  public static EmployeeEmail NewEntity(ContactOwnership ownership, string email, bool isPrimary)
+  public static EmployeeEmail NewEntity(ContactOwnership ownership, string email, bool isPrimary, bool showInProfile)
   {
     var now = DateTime.UtcNow;
     return new EmployeeEmail
@@ -48,6 +49,7 @@ public class EmployeeEmailService(AppDbContext context)
       Ownership = ownership,
       Email = email,
       IsPrimary = isPrimary,
+      ShowInProfile = showInProfile,
       CreatedAt = now,
       UpdatedAt = now,
     };
@@ -114,7 +116,7 @@ public class EmployeeEmailService(AppDbContext context)
         .AnyAsync(ee => ee.EmployeeId == employeeId);
     var makePrimary = !hasEmails || dto.IsPrimary;
 
-    var entity = NewEntity(dto.Ownership!.Value, normalized, makePrimary);
+    var entity = NewEntity(dto.Ownership!.Value, normalized, makePrimary, dto.ShowInProfile ?? true);
     entity.EmployeeId = employeeId;
 
     await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -168,6 +170,11 @@ public class EmployeeEmailService(AppDbContext context)
     {
       await ClearPrimaryAsync(employeeId);
       email.IsPrimary = true;
+    }
+
+    if (dto.ShowInProfile is bool show)
+    {
+      email.ShowInProfile = show;
     }
 
     email.Ownership = dto.Ownership!.Value;
@@ -279,7 +286,7 @@ public class EmployeeEmailService(AppDbContext context)
           "Emails must be validated with ValidateForNewEmployeeAsync before calling NewEntitiesForNewEmployee.");
       }
 
-      return NewEntity(dto.Ownership!.Value, normalized, index == primaryIndex);
+      return NewEntity(dto.Ownership!.Value, normalized, index == primaryIndex, dto.ShowInProfile ?? true);
     })];
   }
 }

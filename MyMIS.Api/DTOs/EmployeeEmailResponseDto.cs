@@ -13,4 +13,6 @@ public class EmployeeEmailResponseDto
   public string Email { get; set; } = string.Empty;
 
   public bool IsPrimary { get; set; }
+
+  public bool ShowInProfile { get; set; }
 }

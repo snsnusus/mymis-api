@@ -16,4 +16,6 @@ public class EmployeeAddressCreateDto
   public AddressDto? Address { get; set; }
 
   public bool IsPrimary { get; set; }
+
+  public bool? ShowInProfile { get; set; }
 }

@@ -54,7 +54,7 @@ public class EmployeeAddressService(AppDbContext context)
         .AnyAsync(a => a.EmployeeId == employeeId);
     var makePrimary = !hasAddresses || dto.IsPrimary;
 
-    var address = NewEntity(dto, makePrimary);
+    var address = NewEntity(dto, makePrimary, dto.ShowInProfile ?? true);
     address.EmployeeId = employeeId;
 
     await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -106,6 +106,11 @@ public class EmployeeAddressService(AppDbContext context)
     {
       await ClearPrimaryAsync(employeeId);
       address.IsPrimary = true;
+    }
+
+    if (dto.ShowInProfile is bool show)
+    {
+      address.ShowInProfile = show;
     }
 
     address.Type = dto.Type!.Value;
@@ -200,10 +205,10 @@ public class EmployeeAddressService(AppDbContext context)
       primaryIndex = 0;
     }
 
-    return dtos.Select((dto, index) => NewEntity(dto, index == primaryIndex)).ToList();
+    return dtos.Select((dto, index) => NewEntity(dto, index == primaryIndex, dto.ShowInProfile ?? true)).ToList();
   }
 
-  private static EmployeeAddress NewEntity(EmployeeAddressCreateDto dto, bool isPrimary)
+  private static EmployeeAddress NewEntity(EmployeeAddressCreateDto dto, bool isPrimary, bool showInProfile)
   {
     var now = DateTime.UtcNow;
     return new EmployeeAddress
@@ -211,6 +216,7 @@ public class EmployeeAddressService(AppDbContext context)
       Type = dto.Type!.Value,
       Address = AddressMapper.ToEntity(dto.Address!),
       IsPrimary = isPrimary,
+      ShowInProfile = showInProfile,
       CreatedAt = now,
       UpdatedAt = now,
     };
@@ -248,5 +254,6 @@ public class EmployeeAddressService(AppDbContext context)
     Type = a.Type,
     Address = AddressMapper.ToResponse(a.Address),
     IsPrimary = a.IsPrimary,
+    ShowInProfile = a.ShowInProfile,
   };
 }

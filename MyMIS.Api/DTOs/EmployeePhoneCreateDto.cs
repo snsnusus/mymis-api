@@ -15,4 +15,7 @@ public class EmployeePhoneCreateDto
   public PhoneDto? Phone { get; set; }
 
   public bool IsPrimary { get; set; }
+
+  // null (not sent) = on create: visible (default); on update: keep the current value.
+  public bool? ShowInProfile { get; set; }
 }

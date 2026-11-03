@@ -16,4 +16,6 @@ public class EmployeePhoneResponseDto
   public PhoneResponseDto Phone { get; set; } = null!;
 
   public bool IsPrimary { get; set; }
+
+  public bool ShowInProfile { get; set; }
 }

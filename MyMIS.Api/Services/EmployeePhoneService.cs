@@ -64,7 +64,7 @@ public class EmployeePhoneService(AppDbContext context)
         .AnyAsync(ep => ep.EmployeeId == employeeId);
     var makePrimary = !hasPhones || dto.IsPrimary;
 
-    var phone = NewEntity(dto.Ownership!.Value, normalized, lineType, makePrimary);
+    var phone = NewEntity(dto.Ownership!.Value, normalized, lineType, makePrimary, dto.ShowInProfile ?? true);
     phone.EmployeeId = employeeId;
 
     await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -125,6 +125,11 @@ public class EmployeePhoneService(AppDbContext context)
     {
       await ClearPrimaryAsync(employeeId);
       phone.IsPrimary = true;
+    }
+
+    if (dto.ShowInProfile is bool show)
+    {
+      phone.ShowInProfile = show;
     }
 
     phone.Ownership = dto.Ownership!.Value;
@@ -192,7 +197,7 @@ public class EmployeePhoneService(AppDbContext context)
     _context.EmployeePhones.AsNoTracking()
       .Where(ep => ep.EmployeeId == employeeId);
 
-  public static EmployeePhone NewEntity(ContactOwnership ownership, Phone phone, PhoneLineType type, bool isPrimary)
+  public static EmployeePhone NewEntity(ContactOwnership ownership, Phone phone, PhoneLineType type, bool isPrimary, bool showInProfile)
   {
     var now = DateTime.UtcNow;
     var employeePhone = new EmployeePhone
@@ -201,6 +206,7 @@ public class EmployeePhoneService(AppDbContext context)
       Phone = phone,
       LineType = type,
       IsPrimary = isPrimary,
+      ShowInProfile = showInProfile,
       CreatedAt = now,
       UpdatedAt = now,
     };
@@ -214,6 +220,7 @@ public class EmployeePhoneService(AppDbContext context)
     LineType = ep.LineType,
     Phone = PhoneFormatter.ToResponse(ep.Phone),
     IsPrimary = ep.IsPrimary,
+    ShowInProfile = ep.ShowInProfile,
   };
 
   private async Task ClearPrimaryAsync(int employeeId)
@@ -300,7 +307,7 @@ public class EmployeePhoneService(AppDbContext context)
         ?? throw new InvalidOperationException("Phones must be validated with ValidateForNewEmployeeAsync before calling NewEntitiesForNewEmployee.");
       var lineType = PhoneFormatter.DetectLineType(normalized);
 
-      return NewEntity(dto.Ownership!.Value, normalized, lineType, index == primaryIndex);
+      return NewEntity(dto.Ownership!.Value, normalized, lineType, index == primaryIndex, dto.ShowInProfile ?? true);
     })];
   }
 }
