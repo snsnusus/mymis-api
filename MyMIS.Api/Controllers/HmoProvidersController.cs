@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Services;
 
@@ -7,13 +8,13 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // logged in; management actions add hmo.manage below
+[Authorize]
 public class HmoProvidersController(HmoProviderService service) : ControllerBase
 {
   private readonly HmoProviderService _service = service;
 
+  [Authorize(Policy = PermissionNames.HmoProviders.Read)]
   [HttpGet]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<List<HmoProviderResponseDto>>> GetAll()
   {
     return Ok(await _service.GetAllAsync());
@@ -27,8 +28,8 @@ public class HmoProvidersController(HmoProviderService service) : ControllerBase
     return Ok(await _service.GetLookupAsync());
   }
 
+  [Authorize(Policy = PermissionNames.HmoProviders.Read)]
   [HttpGet("{id:int}")]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoProviderResponseDto>> GetById(int id)
   {
     var provider = await _service.GetByIdAsync(id);
@@ -40,8 +41,8 @@ public class HmoProvidersController(HmoProviderService service) : ControllerBase
     return Ok(provider);
   }
 
+  [Authorize(Policy = PermissionNames.HmoProviders.Create)]
   [HttpPost]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoProviderResponseDto>> Create(HmoProviderCreateDto dto)
   {
     if (await _service.CodeExistsAsync(dto.Code))
@@ -59,8 +60,8 @@ public class HmoProvidersController(HmoProviderService service) : ControllerBase
     return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
   }
 
+  [Authorize(Policy = PermissionNames.HmoProviders.Update)]
   [HttpPut("{id:int}")]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoProviderResponseDto>> Update(int id, HmoProviderUpdateDto dto)
   {
     if (await _service.GetByIdAsync(id) is null)

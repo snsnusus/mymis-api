@@ -2,8 +2,8 @@ using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.IntegrationTests.Infrastructure;
-using MyMIS.Api.Models;
 
 namespace MyMIS.Api.IntegrationTests;
 
@@ -16,111 +16,119 @@ public class AuthorizationWiringTests(ApiFactory factory)
 
   // ---------------- the tables: (HTTP method, URL, permission the controller requires) ----------------
 
+  // One row per permission-gated route (design doc §6). Gate 1 only: the {Missing} ids
+  // mean anything that passes authorization ends in 404/400/415 and changes no data.
   public static TheoryData<string, string, string> PermissionGated => new()
   {
-    { "POST",   "/api/Offices", "offices.manage" },
-    { "PUT",    $"/api/Offices/{Missing}", "offices.manage" },
-    { "DELETE", $"/api/Offices/{Missing}", "offices.manage" },
+    // Offices
+    { "GET",    "/api/Offices", PermissionNames.Offices.Read },
+    { "GET",    $"/api/Offices/{Missing}", PermissionNames.Offices.Read },
+    { "POST",   "/api/Offices", PermissionNames.Offices.Create },
+    { "PUT",    $"/api/Offices/{Missing}", PermissionNames.Offices.Update },
+    { "DELETE", $"/api/Offices/{Missing}", PermissionNames.Offices.Delete },
 
-    { "GET",  "/api/HmoProviders", "hmo.manage" },
-    { "GET",  $"/api/HmoProviders/{Missing}", "hmo.manage" },
-    { "POST", "/api/HmoProviders", "hmo.manage" },
-    { "PUT",  $"/api/HmoProviders/{Missing}", "hmo.manage" },
-    { "GET",  $"/api/HmoPlans?providerId={Missing}", "hmo.manage" },
-    { "GET",  $"/api/HmoPlans/{Missing}", "hmo.manage" },
-    { "POST", "/api/HmoPlans", "hmo.manage" },
-    { "PUT",  $"/api/HmoPlans/{Missing}", "hmo.manage" },
+    // HMO providers and plans (admin data; the /lookup routes are login-only)
+    { "GET",  "/api/HmoProviders", PermissionNames.HmoProviders.Read },
+    { "GET",  $"/api/HmoProviders/{Missing}", PermissionNames.HmoProviders.Read },
+    { "POST", "/api/HmoProviders", PermissionNames.HmoProviders.Create },
+    { "PUT",  $"/api/HmoProviders/{Missing}", PermissionNames.HmoProviders.Update },
+    { "GET",  $"/api/HmoPlans?providerId={Missing}", PermissionNames.HmoPlans.Read },
+    { "GET",  $"/api/HmoPlans/{Missing}", PermissionNames.HmoPlans.Read },
+    { "POST", "/api/HmoPlans", PermissionNames.HmoPlans.Create },
+    { "PUT",  $"/api/HmoPlans/{Missing}", PermissionNames.HmoPlans.Update },
 
-    { "POST",   "/api/Regions", "locations.manage" },
-    { "PUT",    $"/api/Regions/{Missing}", "locations.manage" },
-    { "DELETE", $"/api/Regions/{Missing}", "locations.manage" },
-    { "POST",   "/api/Regions/bulk", "locations.manage" },
-    { "POST",   "/api/Cities", "locations.manage" },
-    { "PUT",    $"/api/Cities/{Missing}", "locations.manage" },
-    { "DELETE", $"/api/Cities/{Missing}", "locations.manage" },
-    { "POST",   $"/api/Cities/bulk?regionId={Missing}", "locations.manage" },
-    { "POST",   "/api/Barangays", "locations.manage" },
-    { "PUT",    $"/api/Barangays/{Missing}", "locations.manage" },
-    { "DELETE", $"/api/Barangays/{Missing}", "locations.manage" },
-    { "POST",   $"/api/Barangays/bulk?cityId={Missing}", "locations.manage" },
+    // Locations (bulk upload = create)
+    { "GET",    "/api/Regions", PermissionNames.Locations.Read },
+    { "GET",    $"/api/Regions/{Missing}", PermissionNames.Locations.Read },
+    { "POST",   "/api/Regions", PermissionNames.Locations.Create },
+    { "POST",   "/api/Regions/bulk", PermissionNames.Locations.Create },
+    { "PUT",    $"/api/Regions/{Missing}", PermissionNames.Locations.Update },
+    { "DELETE", $"/api/Regions/{Missing}", PermissionNames.Locations.Delete },
+    { "GET",    "/api/Cities", PermissionNames.Locations.Read },
+    { "GET",    $"/api/Cities/{Missing}", PermissionNames.Locations.Read },
+    { "POST",   "/api/Cities", PermissionNames.Locations.Create },
+    { "POST",   $"/api/Cities/bulk?regionId={Missing}", PermissionNames.Locations.Create },
+    { "PUT",    $"/api/Cities/{Missing}", PermissionNames.Locations.Update },
+    { "DELETE", $"/api/Cities/{Missing}", PermissionNames.Locations.Delete },
+    { "GET",    "/api/Barangays", PermissionNames.Locations.Read },
+    { "GET",    $"/api/Barangays/{Missing}", PermissionNames.Locations.Read },
+    { "POST",   "/api/Barangays", PermissionNames.Locations.Create },
+    { "POST",   $"/api/Barangays/bulk?cityId={Missing}", PermissionNames.Locations.Create },
+    { "PUT",    $"/api/Barangays/{Missing}", PermissionNames.Locations.Update },
+    { "DELETE", $"/api/Barangays/{Missing}", PermissionNames.Locations.Delete },
 
-    // Positions also run a second, manual SameDepartment check inside the action.
-    // These rows only cover the first gate (the permission).
-    { "POST", "/api/Positions", "positions.create" },
-    { "PUT",  $"/api/Positions/{Missing}", "positions.update" },
+    // Departments (PUT also runs gate 2 inside the action; this row covers gate 1)
+    { "GET",    "/api/Departments", PermissionNames.Departments.Read },
+    { "GET",    $"/api/Departments/{Missing}", PermissionNames.Departments.Read },
+    { "POST",   "/api/Departments", PermissionNames.Departments.Create },
+    { "PUT",    $"/api/Departments/{Missing}", PermissionNames.Departments.Update },
+    { "DELETE", $"/api/Departments/{Missing}", PermissionNames.Departments.Delete },
 
-    { "POST", "/api/Employees", "employees.create" },
-    { "GET",  "/api/Employees/availability?username=nobody", "employees.create" },
-    { "PUT",  $"/api/Employees/{Missing}", "employees.update" },
+    // Positions (POST/PUT also run gate 2 inside the action)
+    { "GET",    "/api/Positions", PermissionNames.Positions.Read },
+    { "GET",    $"/api/Positions/{Missing}", PermissionNames.Positions.Read },
+    { "POST",   "/api/Positions", PermissionNames.Positions.Create },
+    { "PUT",    $"/api/Positions/{Missing}", PermissionNames.Positions.Update },
+    { "DELETE", $"/api/Positions/{Missing}", PermissionNames.Positions.Delete },
 
-    { "GET",    $"/api/Employees/{Missing}/phones", "employees.update" },
-    { "GET",    $"/api/Employees/{Missing}/phones/1", "employees.update" },
-    { "POST",   $"/api/Employees/{Missing}/phones", "employees.update" },
-    { "PUT",    $"/api/Employees/{Missing}/phones/1", "employees.update" },
-    { "DELETE", $"/api/Employees/{Missing}/phones/1", "employees.update" },
+    // Employees (PUT and partial also run gate 2 through EmployeeAccessGuard)
+    { "POST",   "/api/Employees", PermissionNames.Employees.Create },
+    { "GET",    "/api/Employees/availability?username=nobody", PermissionNames.Employees.Create },
+    { "PUT",    $"/api/Employees/{Missing}", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}", PermissionNames.Employees.Delete },
+    { "PUT",    $"/api/Employees/partial/{Missing}", PermissionNames.Employees.WorkDetailsUpdate },
 
-    { "GET",    $"/api/Employees/{Missing}/emergency-contacts", "employees.update" },
-    { "POST",   $"/api/Employees/{Missing}/emergency-contacts", "employees.update" },
-    { "PUT",    $"/api/Employees/{Missing}/emergency-contacts/1", "employees.update" },
-    { "DELETE", $"/api/Employees/{Missing}/emergency-contacts/1", "employees.update" },
+    // Employee sub-resources: view = employees.read, add/change/remove = employees.update
+    { "GET",    $"/api/Employees/{Missing}/phones", PermissionNames.Employees.Read },
+    { "GET",    $"/api/Employees/{Missing}/phones/1", PermissionNames.Employees.Read },
+    { "POST",   $"/api/Employees/{Missing}/phones", PermissionNames.Employees.Update },
+    { "PUT",    $"/api/Employees/{Missing}/phones/1", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}/phones/1", PermissionNames.Employees.Update },
 
-    { "GET", $"/api/Employees/{Missing}/emails", "employees.update" },
-    { "GET", $"/api/Employees/{Missing}/emails/1", "employees.update" },
-    { "GET", $"/api/Employees/{Missing}/addresses", "employees.update" },
+    { "GET",    $"/api/Employees/{Missing}/emails", PermissionNames.Employees.Read },
+    { "GET",    $"/api/Employees/{Missing}/emails/1", PermissionNames.Employees.Read },
+    { "POST",   $"/api/Employees/{Missing}/emails", PermissionNames.Employees.Update },
+    { "PUT",    $"/api/Employees/{Missing}/emails/1", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}/emails/1", PermissionNames.Employees.Update },
+
+    { "GET",    $"/api/Employees/{Missing}/addresses", PermissionNames.Employees.Read },
+    { "POST",   $"/api/Employees/{Missing}/addresses", PermissionNames.Employees.Update },
+    { "PUT",    $"/api/Employees/{Missing}/addresses/1", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}/addresses/1", PermissionNames.Employees.Update },
+
+    { "GET",    $"/api/Employees/{Missing}/emergency-contacts", PermissionNames.Employees.Read },
+    { "POST",   $"/api/Employees/{Missing}/emergency-contacts", PermissionNames.Employees.Update },
+    { "PUT",    $"/api/Employees/{Missing}/emergency-contacts/1", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}/emergency-contacts/1", PermissionNames.Employees.Update },
+
+    { "GET", $"/api/Employees/{Missing}/government-ids", PermissionNames.Employees.Read },
+    { "PUT", $"/api/Employees/{Missing}/government-ids", PermissionNames.Employees.Update },
+
+    { "GET",    $"/api/Employees/{Missing}/hmo", PermissionNames.Employees.Read },
+    { "POST",   $"/api/Employees/{Missing}/hmo", PermissionNames.Employees.Update },
+    { "PUT",    $"/api/Employees/{Missing}/hmo", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}/hmo", PermissionNames.Employees.Update },
+    { "POST",   $"/api/Employees/{Missing}/hmo/dependents", PermissionNames.Employees.Update },
+    { "PUT",    $"/api/Employees/{Missing}/hmo/dependents/1", PermissionNames.Employees.Update },
+    { "DELETE", $"/api/Employees/{Missing}/hmo/dependents/1", PermissionNames.Employees.Update },
   };
 
-  // Routes that only need a login (a plain [Authorize]).
+  // Routes that only need a login (a plain [Authorize]): self-service, the
+  // company directory and basic profile, and the form lookups.
   public static TheoryData<string, string> LoginOnly => new()
   {
-    { "GET", "/api/Offices" },
-    { "GET", $"/api/Offices/{Missing}" },
-    { "GET", "/api/Regions" },
-    { "GET", $"/api/Regions/{Missing}" },
-    { "GET", "/api/Cities" },
-    { "GET", $"/api/Cities/{Missing}" },
-    { "GET", "/api/Barangays" },
-    { "GET", $"/api/Barangays/{Missing}" },
-    { "GET", "/api/Positions" },
-    { "GET", $"/api/Positions/{Missing}" },
-    { "GET", "/api/Departments" },
-    { "GET", $"/api/Departments/{Missing}" },
+    { "GET", "/api/Employees" },
+    { "GET", $"/api/Employees/{Missing}" },
+    { "GET", "/api/Employees/lookup" },
+    { "GET", "/api/HmoProviders/lookup" },
     { "GET", "/api/Employees/me/phones" },
     { "GET", "/api/Employees/me/emails" },
     { "GET", "/api/Employees/me/addresses" },
     { "GET", "/api/Employees/me/emergency-contacts" },
+    { "GET", "/api/Employees/me/government-ids" },
+    { "GET", "/api/Employees/me/hmo" },
     { "POST", "/api/Auth/change-password" },
   };
-
-  // Routes gated by [Authorize(Roles = "...")]: one row per role,
-  // with whether that role is allowed through.
-  public static TheoryData<string, string, LegacyRole, bool> RoleGated
-  {
-    get
-    {
-      (string Method, string Url, LegacyRole[] Allowed)[] endpoints =
-      [
-        ("POST",   "/api/Departments", new[] { LegacyRole.Admin, LegacyRole.SuperAdmin }),
-        ("PUT",    $"/api/Departments/{Missing}", new[] { LegacyRole.Admin, LegacyRole.SuperAdmin }),
-        ("DELETE", $"/api/Departments/{Missing}", new[] { LegacyRole.SuperAdmin }),
-        ("DELETE", $"/api/Positions/{Missing}", new[] { LegacyRole.SuperAdmin }),
-        ("PUT",    $"/api/Employees/partial/{Missing}", new[] { LegacyRole.Admin, LegacyRole.SuperAdmin }),
-      ];
-
-      var data = new TheoryData<string, string, LegacyRole, bool>();
-
-      foreach (var (method, url, allowed) in endpoints)
-      {
-        foreach (var role in Enum.GetValues<LegacyRole>())
-        {
-          data.Add(method, url, role, allowed.Contains(role));
-        }
-      }
-
-      return data;
-    }
-  }
-
-  // ---------------- helpers ----------------
 
   private static async Task<HttpStatusCode> SendAsync(HttpClient client, string method, string url)
   {
@@ -159,7 +167,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task PermissionGated_LoggedInWithNoPermissions_Returns403(string method, string url, string permission)
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.User);
+    var client = await factory.GetClientWithoutPermissionsAsync();
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -174,8 +182,8 @@ public class AuthorizationWiringTests(ApiFactory factory)
   [MemberData(nameof(PermissionGated))]
   public async Task PermissionGated_WithOnlyTheRequiredPermission_IsNotRejected(string method, string url, string permission)
   {
-    // Arrange: a plain User holding just this one permission
-    var client = await factory.GetClientAsync(LegacyRole.User, permission);
+    // Arrange: a role holding just this one permission
+    var client = await factory.GetClientAsync(permission);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -191,8 +199,8 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task PermissionGated_WithEveryOtherPermission_Returns403(string method, string url, string permission)
   {
     // Arrange: all permissions except the one this route needs
-    var others = TestPermissions.All.Where(p => p != permission).ToArray();
-    var client = await factory.GetClientAsync(LegacyRole.User, others);
+    var others = PermissionNames.All.Where(p => p != permission).ToArray();
+    var client = await factory.GetClientAsync(others);
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -207,8 +215,8 @@ public class AuthorizationWiringTests(ApiFactory factory)
   [MemberData(nameof(PermissionGated))]
   public async Task PermissionGated_AsSuperAdmin_IsNotRejected(string method, string url, string permission)
   {
-    // Arrange: SuperAdmin holds no permissions at all, but bypasses the check
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    // Arrange: SuperAdmin holds every permission through the cache
+    var client = await factory.GetSuperAdminClientAsync();
 
     // Act
     var status = await SendAsync(client, method, url);
@@ -240,41 +248,14 @@ public class AuthorizationWiringTests(ApiFactory factory)
   public async Task LoginOnly_LoggedInWithNoPermissions_IsNotRejected(string method, string url)
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.User);
+    var client = await factory.GetClientWithoutPermissionsAsync();
 
     // Act
     var status = await SendAsync(client, method, url);
 
     // Assert
-    Assert.False(RejectedByAuth(status), $"{Describe(method, url, status)} for a logged-in plain User.");
+    Assert.False(RejectedByAuth(status), $"{Describe(method, url, status)} for a logged-in user with no permissions.");
   }
-
-  // ---------------- role-gated routes ----------------
-
-  [Theory]
-  [MemberData(nameof(RoleGated))]
-  public async Task RoleGated_OnlyTheListedRolesGetThrough(string method, string url, LegacyRole role, bool allowed)
-  {
-    // Arrange
-    var client = await factory.GetClientAsync(role);
-
-    // Act
-    var status = await SendAsync(client, method, url);
-
-    // Assert
-    if (allowed)
-    {
-      Assert.False(RejectedByAuth(status), $"{Describe(method, url, status)} for role {role}, which should be allowed.");
-    }
-    else
-    {
-      Assert.True(
-        status == HttpStatusCode.Forbidden,
-        $"{Describe(method, url, status)} for role {role}, expected 403.");
-    }
-  }
-
-  // ---------------- inventory ----------------
 
   [Fact]
   public void EveryControllerEndpoint_RequiresLogin_ExceptTheKnownPublicOnes()
@@ -285,9 +266,12 @@ public class AuthorizationWiringTests(ApiFactory factory)
     // Act
     var open = provider.ApiDescriptionGroups.Items
       .SelectMany(group => group.Items)
-      .Where(api => !(api.ActionDescriptor.EndpointMetadata ?? new List<object>())
-        .OfType<IAuthorizeData>()
-        .Any())
+      .Where(api =>
+      {
+        var metadata = api.ActionDescriptor.EndpointMetadata ?? new List<object>();
+        return !metadata.OfType<IAuthorizeData>().Any()
+            || metadata.OfType<IAllowAnonymous>().Any();
+      })
       .Select(api => $"{api.HttpMethod} {api.RelativePath}")
       .OrderBy(endpoint => endpoint, StringComparer.Ordinal)
       .ToList();

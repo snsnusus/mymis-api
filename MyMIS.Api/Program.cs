@@ -63,9 +63,8 @@ builder.Services.AddScoped<RegionService>();
 builder.Services.AddScoped<S3UploadService>();
 builder.Services.AddScoped<TokenService>();
 
+builder.Services.AddScoped<EmployeeAccessGuard>();
 builder.Services.AddScoped<IEmployeeCodeGenerator, EmployeeCodeGenerator>();
-builder.Services.AddScoped<IAuthorizationHandler, DepartmentScopeHandler>();
-builder.Services.AddScoped<IAuthorizationHandler, SameDepartmentHandler>();
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
 
@@ -98,7 +97,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
-      RoleClaimType = "role",
       NameClaimType = "name",
 
       ValidateIssuer = true,
@@ -117,25 +115,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   });
 
 // Keep the builder in a variable so we can keep adding policies after the chain.
-var authorization = builder.Services.AddAuthorizationBuilder()
-  // Department handlers: still used by Departments/Employees/Positions
-  // controllers until Step 6 replaces them with scoped permissions.
-  .AddPolicy("DepartmentScope", policy =>
-    policy.Requirements.Add(new DepartmentScopeRequirement()))
-  .AddPolicy("SameDepartment", policy =>
-    policy.Requirements.Add(new SameDepartmentRequirement()))
-  // Legacy *.manage policies: controllers still reference them until Step 6
-  // switches to the CRUD names. SuperAdmin passes them because the cache
-  // gives a system role every row in Permissions, including these.
-  .AddPolicy("hmo.manage", policy =>
-    policy.Requirements.Add(new PermissionRequirement("hmo.manage")))
-  .AddPolicy("locations.manage", policy =>
-    policy.Requirements.Add(new PermissionRequirement("locations.manage")))
-  .AddPolicy("offices.manage", policy =>
-    policy.Requirements.Add(new PermissionRequirement("offices.manage")));
+var authorization = builder.Services.AddAuthorizationBuilder();
 
 // One policy per catalog permission, named exactly like the permission.
-// [Authorize(Policy = "employees.update")] finds the policy by that name.
 foreach (var permission in PermissionNames.All)
 {
   authorization.AddPolicy(permission, policy =>

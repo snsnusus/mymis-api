@@ -135,7 +135,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   {
     // Arrange: even a SuperAdmin's token doesn't open this endpoint. Only the secret does.
     var employee = await factory.SeedEmployeeAsync();
-    var superAdmin = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var superAdmin = await factory.GetSuperAdminClientAsync();
 
     // Act
     using var request = NewCallback(employee.Id, secret: null);
@@ -276,7 +276,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   {
     // Arrange
     var target = await factory.SeedEmployeeAsync();
-    var client = await factory.GetClientAsync(LegacyRole.User);
+    var client = await factory.GetClientAsync();
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{target.Id}/avatar", NewUpload("image/png", "photo.png"));
@@ -291,7 +291,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   {
     // Arrange: positions.create is a real permission, but not one this endpoint accepts
     var target = await factory.SeedEmployeeAsync();
-    var client = await factory.GetClientAsync(LegacyRole.User, "positions.create");
+    var client = await factory.GetClientAsync("positions.create");
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{target.Id}/avatar", NewUpload("image/png", "photo.png"));
@@ -305,7 +305,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   {
     // Arrange
     var target = await factory.SeedEmployeeAsync();
-    var client = await factory.GetClientAsync(LegacyRole.User, "employees.update");
+    var client = await factory.GetClientAsync("employees.update");
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{target.Id}/avatar", NewUpload("image/png", "photo.png"));
@@ -323,7 +323,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   {
     // Arrange: the controller accepts update OR create, which an attribute alone couldn't express
     var target = await factory.SeedEmployeeAsync();
-    var client = await factory.GetClientAsync(LegacyRole.User, "employees.create");
+    var client = await factory.GetClientAsync("employees.create");
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{target.Id}/avatar", NewUpload("image/png", "photo.png"));
@@ -337,7 +337,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   {
     // Arrange
     var target = await factory.SeedEmployeeAsync();
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{target.Id}/avatar", NewUpload("image/png", "photo.png"));
@@ -350,7 +350,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   public async Task UploadAvatarForAnEmployee_WhoDoesNotExist_Returns404AndUploadsNothing()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.User, "employees.update");
+    var client = await factory.GetClientAsync("employees.update");
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{Missing}/avatar", NewUpload("image/png", "photo.png"));
@@ -364,7 +364,7 @@ public class AvatarEndpointTests(ApiFactory factory)
   public async Task UploadAvatarForAnEmployee_WhoDoesNotExist_WithoutPermission_Returns403NotNotFound()
   {
     // Arrange: permission is checked before existence on this route, so the answer doesn't reveal which ids exist
-    var client = await factory.GetClientAsync(LegacyRole.User);
+    var client = await factory.GetClientAsync();
 
     // Act
     using var response = await client.PostAsync($"/api/Employees/{Missing}/avatar", NewUpload("image/png", "photo.png"));

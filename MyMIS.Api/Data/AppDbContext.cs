@@ -12,7 +12,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
   public DbSet<Department> Departments => Set<Department>();
   public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
   public DbSet<Employee> Employees => Set<Employee>();
-  public DbSet<EmployeePermission> EmployeePermissions => Set<EmployeePermission>();
   public DbSet<EmployeePersonalDetail> EmployeePersonalDetails => Set<EmployeePersonalDetail>();
   public DbSet<EmployeeAddress> EmployeeAddresses => Set<EmployeeAddress>();
   public DbSet<EmployeeEmail> EmployeeEmails => Set<EmployeeEmail>();
@@ -53,11 +52,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     modelBuilder.Entity<Employee>(entity =>
     {
       entity.HasQueryFilter(e => e.DeletedAt == null);
-
-      entity.Property(e => e.LegacyRole)
-        .HasColumnName("Role")
-        .HasConversion<string>()
-        .HasDefaultValue(LegacyRole.User);
 
       entity.Property(e => e.AvatarStyle)
         .HasConversion<string>()
@@ -197,19 +191,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
       entity.HasOne(eh => eh.Hobby)
         .WithMany(h => h.EmployeeHobbies)
         .HasForeignKey(eh => eh.HobbyId);
-    });
-
-    modelBuilder.Entity<EmployeePermission>(entity =>
-    {
-      entity.HasKey(ep => new { ep.EmployeeId, ep.PermissionId });
-
-      entity.HasOne(ep => ep.Employee)
-        .WithMany(e => e.EmployeePermissions)
-        .HasForeignKey(ep => ep.EmployeeId);
-
-      entity.HasOne(ep => ep.Permission)
-        .WithMany()
-        .HasForeignKey(ep => ep.PermissionId);
     });
 
     modelBuilder.Entity<Permission>()

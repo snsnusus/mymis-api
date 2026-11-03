@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
@@ -14,8 +15,8 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
 {
   private readonly HmoPlanService _service = service;
 
+  [Authorize(Policy = PermissionNames.HmoPlans.Read)]
   [HttpGet]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<List<HmoPlanSummaryDto>>> GetByProvider(
       [FromQuery, BindRequired] int providerId)
   {
@@ -35,8 +36,8 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
     return Ok(await _service.GetLookupAsync(providerId));
   }
 
+  [Authorize(Policy = PermissionNames.HmoPlans.Read)]
   [HttpGet("{id:int}")]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoPlanResponseDto>> GetById(int id)
   {
     var plan = await _service.GetByIdAsync(id);
@@ -48,8 +49,8 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
     return Ok(plan);
   }
 
+  [Authorize(Policy = PermissionNames.HmoPlans.Create)]
   [HttpPost]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoPlanResponseDto>> Create(HmoPlanCreateDto dto)
   {
     if (await _service.NameExistsAsync(dto.HmoProviderId!.Value, dto.Name))
@@ -66,8 +67,8 @@ public class HmoPlansController(HmoPlanService service) : ControllerBase
     return CreatedAtAction(nameof(GetById), new { id = result.Value!.Id }, result.Value);
   }
 
+  [Authorize(Policy = PermissionNames.HmoPlans.Update)]
   [HttpPut("{id:int}")]
-  [Authorize(Policy = "hmo.manage")]
   public async Task<ActionResult<HmoPlanResponseDto>> Update(int id, HmoPlanCreateDto dto)
   {
     if (!await _service.ExistsAsync(id))

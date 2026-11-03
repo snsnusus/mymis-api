@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
@@ -10,14 +11,10 @@ namespace MyMIS.Api.Controllers;
 [ApiController]
 [Route("api/Employees")]
 [Authorize]
-public class EmergencyContactsController : ControllerBase
+public class EmergencyContactsController(EmergencyContactService service, EmployeeAccessGuard employeeAccessGuard) : ControllerBase
 {
-  private readonly EmergencyContactService _service;
-
-  public EmergencyContactsController(EmergencyContactService service)
-  {
-    _service = service;
-  }
+  private readonly EmergencyContactService _service = service;
+  private readonly EmployeeAccessGuard _access = employeeAccessGuard;
 
   [HttpGet("me/emergency-contacts")]
   public async Task<ActionResult<List<EmergencyContactResponseDto>>> GetMine()
@@ -66,34 +63,42 @@ public class EmergencyContactsController : ControllerBase
     return await _service.DeleteAsync(employeeId, contactId) ? NoContent() : NotFound();
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Read)]
   [HttpGet("{id:int}/emergency-contacts")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<List<EmergencyContactResponseDto>>> GetForEmployee(int id)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Read) is { } denied) return denied;
+
     var contacts = await _service.GetAllAsync(id);
     return contacts is null ? NotFound() : Ok(contacts);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPost("{id:int}/emergency-contacts")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmergencyContactResponseDto>> CreateForEmployee(int id, EmergencyContactCreateDto dto)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.CreateAsync(id, dto);
     return ToActionResult(result, StatusCodes.Status201Created);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPut("{id:int}/emergency-contacts/{contactId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmergencyContactResponseDto>> UpdateForEmployee(int id, int contactId, EmergencyContactCreateDto dto)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.UpdateAsync(id, contactId, dto);
     return ToActionResult(result);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpDelete("{id:int}/emergency-contacts/{contactId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<IActionResult> DeleteForEmployee(int id, int contactId)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     return await _service.DeleteAsync(id, contactId) ? NoContent() : NotFound();
   }
 

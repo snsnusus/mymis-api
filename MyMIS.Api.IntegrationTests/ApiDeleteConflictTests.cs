@@ -33,7 +33,7 @@ public class ApiDeleteConflictTests(ApiFactory factory)
   public async Task DeleteRegion_ThatStillHasACity_Returns409AndKeepsTheRegion()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var region = await factory.SeedRegionAsync();
     await factory.SeedCityAsync(region);
 
@@ -49,7 +49,7 @@ public class ApiDeleteConflictTests(ApiFactory factory)
   public async Task DeleteCity_ThatStillHasABarangay_Returns409AndKeepsTheCity()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var city = await factory.SeedCityAsync(await factory.SeedRegionAsync());
     await factory.SeedBarangayAsync(city);
 
@@ -65,7 +65,7 @@ public class ApiDeleteConflictTests(ApiFactory factory)
   public async Task DeleteDepartment_ThatStillHasAPosition_Returns409AndKeepsTheDepartment()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var department = await factory.SeedDepartmentAsync();
     await factory.SeedPositionAsync(department);
 
@@ -81,7 +81,7 @@ public class ApiDeleteConflictTests(ApiFactory factory)
   public async Task DeleteBarangay_UsedByAnEmergencyContactAddress_Returns409AndKeepsTheBarangay()
   {
     // Arrange: the reference comes from an owned type in another table
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var barangay = await factory.SeedBarangayAsync(await factory.SeedCityAsync(await factory.SeedRegionAsync()));
     var employee = await factory.SeedEmployeeAsync();
     await factory.SeedEmergencyContactInBarangayAsync(employee, barangay);
@@ -98,7 +98,7 @@ public class ApiDeleteConflictTests(ApiFactory factory)
   public async Task DeleteRegion_WithNoCities_StillWorks()
   {
     // Arrange: the filter must not get in the way of a delete that is allowed
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var region = await factory.SeedRegionAsync();
 
     // Act
@@ -113,7 +113,7 @@ public class ApiDeleteConflictTests(ApiFactory factory)
   public async Task DeleteCity_AfterItsBarangaysAreDeleted_Works()
   {
     // Arrange: the order the 409 message tells a user to follow, children first
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var city = await factory.SeedCityAsync(await factory.SeedRegionAsync());
     var barangay = await factory.SeedBarangayAsync(city);
 

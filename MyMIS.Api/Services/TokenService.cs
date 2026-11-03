@@ -19,7 +19,6 @@ public class TokenService(IOptions<JwtOptions> jwtOptions)
         {
             new(JwtRegisteredClaimNames.Sub, employee.Id.ToString()),
             new("name", employee.Username),
-            new("role", employee.LegacyRole.ToString()),
             new("roleId", employee.RoleId.ToString()),
         };
 
@@ -31,11 +30,6 @@ public class TokenService(IOptions<JwtOptions> jwtOptions)
     if (employee.MustChangePassword)
     {
       claims.Add(new Claim("mustChangePassword", "true", ClaimValueTypes.Boolean));
-    }
-
-    foreach (var employeePermission in employee.EmployeePermissions)
-    {
-      claims.Add(new Claim("permission", employeePermission.Permission.Name));
     }
 
     var key = new SymmetricSecurityKey(

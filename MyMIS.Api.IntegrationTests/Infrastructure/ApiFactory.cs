@@ -88,9 +88,32 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     AllowAutoRedirect = false,
   });
 
-  // Inserts a new employee straight into the database, with a unique username each time,
-  // and grants the named permissions (the migrations seed the permission rows).
-  public async Task<Employee> SeedEmployeeAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
+  // An ordinary employee (the seeded Employee role, which can read departments,
+  // positions, offices and locations) or, when permissions are given, a throwaway
+  // role holding exactly those permissions, company-wide.
+  //   SeedEmployeeAsync()                     → the seeded Employee role
+  //   SeedEmployeeAsync("employees.update")   → a throwaway role made just for this employee
+  public Task<Employee> SeedEmployeeAsync(params string[] permissions) =>
+    permissions.Length == 0
+      ? SeedAsync(SystemRoleNames.Employee, [])
+      : SeedAsync(systemRole: null, permissions);
+
+  // The seeded SuperAdmin role (every permission, through the cache).
+  public Task<Employee> SeedSuperAdminAsync() =>
+    SeedAsync(SystemRoleNames.SuperAdmin, []);
+
+  // A throwaway role with NO permissions at all: "logged in, can do nothing".
+  // Different from SeedEmployeeAsync(), whose Employee role has read permissions.
+  public Task<Employee> SeedWithoutPermissionsAsync() =>
+    SeedAsync(systemRole: null, []);
+
+  // The one place that actually inserts an employee.
+  //   systemRole = a seeded role's normalized name (SystemRoleNames.*), or
+  //   null       = build a throwaway role holding exactly `permissions` (may be empty).
+  private async Task<Employee> SeedAsync(string? systemRole,
+    string[] permissions,
+    PermissionScope permissionScope = PermissionScope.Company,
+    int? departmentId = null)
   {
     var suffix = Guid.NewGuid().ToString("N")[..10];
 
@@ -106,19 +129,17 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
       EmployeeCode = $"IT-{suffix}",
       Username = $"it{suffix}",
       PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
-      LegacyRole = role,
+      DepartmentId = departmentId,
     };
 
-    if (role == LegacyRole.SuperAdmin)
+    if (systemRole is not null)
     {
-      employee.RoleId = await db.GetRoleIdAsync(SystemRoleNames.SuperAdmin);
-    }
-    else if (permissions.Length == 0)
-    {
-      employee.RoleId = await db.GetRoleIdAsync(SystemRoleNames.Employee);
+      employee.RoleId = await db.GetRoleIdAsync(systemRole);
     }
     else
     {
+      // With an empty `permissions`, `found` is empty, nothing is missing,
+      // and the role simply gets no RolePermissions.
       var found = await db.Permissions.Where(p => permissions.Contains(p.Name)).ToListAsync();
       var missing = permissions.Except(found.Select(p => p.Name)).ToList();
 
@@ -130,7 +151,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
       var now = DateTime.UtcNow;
 
-      var testRole = new Role
+      employee.Role = new Role
       {
         Name = $"Test {suffix}",
         NormalizedName = $"TEST {suffix}".ToUpperInvariant(),
@@ -139,11 +160,9 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         RolePermissions = [.. found.Select(permission => new RolePermission
         {
           Permission = permission,
-          Scope = PermissionScope.Company,
+          Scope = permissionScope,
         })],
       };
-
-      employee.Role = testRole;
     }
 
     db.Employees.Add(employee);
@@ -162,10 +181,19 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     return auth!.AccessToken;
   }
 
-  // A client that is already logged in as a freshly seeded employee.
-  public async Task<HttpClient> CreateAuthorizedClientAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
+  // A NEW logged-in client for a freshly seeded employee (no caching).
+  public async Task<HttpClient> CreateAuthorizedClientAsync(params string[] permissions) =>
+    await ClientForAsync(await SeedEmployeeAsync(permissions));
+
+  public async Task<HttpClient> CreateSuperAdminClientAsync() =>
+    await ClientForAsync(await SeedSuperAdminAsync());
+
+  public async Task<HttpClient> CreateClientWithoutPermissionsAsync() =>
+    await ClientForAsync(await SeedWithoutPermissionsAsync());
+
+  // Logs the employee in and attaches the token to a new client.
+  private async Task<HttpClient> ClientForAsync(Employee employee)
   {
-    var employee = await SeedEmployeeAsync(role, permissions);
     var token = await LoginAsync(employee.Username);
 
     var client = CreateApiClient();
@@ -175,14 +203,29 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
   private readonly ConcurrentDictionary<string, Task<HttpClient>> _clients = new();
 
-  // Logging in costs a deliberately slow BCrypt hash plus a BCrypt check, so tests that send many
-  // requests as the same kind of user share one logged-in client instead of creating a new one each time.
+  // SHARED logged-in clients, one per kind of user. Logging in costs a deliberately slow
+  // BCrypt hash plus a BCrypt check, so tests that only need "someone with X" reuse one.
   // (Access tokens last 15 minutes, which is longer than a test run.)
-  public Task<HttpClient> GetClientAsync(LegacyRole role = LegacyRole.User, params string[] permissions)
+  public Task<HttpClient> GetClientAsync(params string[] permissions)
   {
-    var key = $"{role}|{string.Join(",", permissions.Order())}";
-    return _clients.GetOrAdd(key, _ => CreateAuthorizedClientAsync(role, permissions));
+    // Order() makes ("a", "b") and ("b", "a") the same key: same permissions, same client.
+    var key = $"permissions|{string.Join(",", permissions.Order())}";
+    return _clients.GetOrAdd(key, _ => CreateAuthorizedClientAsync(permissions));
   }
+
+  public Task<HttpClient> GetSuperAdminClientAsync() =>
+    _clients.GetOrAdd("superadmin", _ => CreateSuperAdminClientAsync());
+
+  public Task<HttpClient> GetClientWithoutPermissionsAsync() =>
+    _clients.GetOrAdd("none", _ => CreateClientWithoutPermissionsAsync());
+
+  // An employee IN `departmentId` whose role holds these permissions DEPARTMENT-scoped
+  // (like a MANAGER): gate 2 lets them act only inside their own department.
+  public Task<Employee> SeedDepartmentScopedEmployeeAsync(int departmentId, params string[] permissions) =>
+    SeedAsync(systemRole: null, permissions, PermissionScope.Department, departmentId);
+
+  public async Task<HttpClient> CreateDepartmentScopedClientAsync(int departmentId, params string[] permissions) =>
+    await ClientForAsync(await SeedDepartmentScopedEmployeeAsync(departmentId, permissions));
 
   // Runs code against the database in a fresh scope, which means a fresh AppDbContext.
   // A context that just failed a SaveChanges is in a bad state, so every attempt gets a new one.

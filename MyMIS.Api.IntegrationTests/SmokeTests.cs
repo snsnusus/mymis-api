@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.Data;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.IntegrationTests.Infrastructure;
@@ -30,16 +31,7 @@ public class SmokeTests(ApiFactory factory)
     var names = await db.Permissions.Select(p => p.Name).ToListAsync();
 
     // Assert
-    string[] expected =
-    [
-      "employees.create", "employees.update", "positions.create", "positions.update",
-      "locations.manage", "offices.manage", "hmo.manage",
-    ];
-
-    foreach (var permission in expected)
-    {
-      Assert.Contains(permission, names);
-    }
+    Assert.Equal(PermissionNames.All.Order(), names.Order());
   }
 
   [Fact]
@@ -74,7 +66,7 @@ public class SmokeTests(ApiFactory factory)
   public async Task PostOffice_LoggedInWithoutThePermission_Returns403()
   {
     // Arrange
-    using var client = await factory.CreateAuthorizedClientAsync(LegacyRole.User);
+    using var client = await factory.CreateAuthorizedClientAsync();
 
     // Act
     var response = await client.PostAsJsonAsync("/api/Offices", NewOffice(Guid.NewGuid().ToString("N")[..8]));
@@ -84,11 +76,11 @@ public class SmokeTests(ApiFactory factory)
   }
 
   [Fact]
-  public async Task PostOffice_WithTheOfficesManagePermission_CreatesTheOfficeInPostgres()
+  public async Task PostOffice_WithTheOfficesCreatePermission_CreatesTheOfficeInPostgres()
   {
     // Arrange
     var suffix = Guid.NewGuid().ToString("N")[..8];
-    using var client = await factory.CreateAuthorizedClientAsync(LegacyRole.User, "offices.manage");
+    using var client = await factory.CreateAuthorizedClientAsync("offices.create");
 
     // Act
     var response = await client.PostAsJsonAsync("/api/Offices", NewOffice(suffix));
@@ -102,10 +94,10 @@ public class SmokeTests(ApiFactory factory)
   }
 
   [Fact]
-  public async Task PostOffice_AsSuperAdminWithoutAnyPermission_IsAllowed()
+  public async Task PostOffice_AsSuperAdmin_IsAllowed()
   {
-    // Arrange: SuperAdmin bypasses every permission check
-    using var client = await factory.CreateAuthorizedClientAsync(LegacyRole.SuperAdmin);
+    // Arrange: SuperAdmin holds every permission through the cache (no bypass)
+    using var client = await factory.CreateSuperAdminClientAsync();
 
     // Act
     var response = await client.PostAsJsonAsync("/api/Offices", NewOffice(Guid.NewGuid().ToString("N")[..8]));

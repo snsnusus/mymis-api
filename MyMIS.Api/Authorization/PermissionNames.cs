@@ -17,8 +17,7 @@ public static class PermissionNames
     public const string Create = "employees.create";
     public const string Update = "employees.update";
     public const string Delete = "employees.delete";
-    public const string PrivateRead = "employees.private.read";
-    public const string UpdateWork = "employees.update.work";
+    public const string WorkDetailsUpdate = "employees.work-details.update";
   }
 
   public static class Departments
@@ -53,14 +52,6 @@ public static class PermissionNames
     public const string Delete = "locations.delete";
   }
 
-  public static class Hmo
-  {
-    public const string Read = "hmo.read";
-    public const string Create = "hmo.create";
-    public const string Update = "hmo.update";
-    public const string Delete = "hmo.delete";
-  }
-
   public static class Roles
   {
     public const string Read = "roles.read";
@@ -68,6 +59,22 @@ public static class PermissionNames
     public const string Update = "roles.update";
     public const string Delete = "roles.delete";
     public const string Assign = "roles.assign";   // set an employee's role (Step 8)
+  }
+
+  public static class HmoProviders
+  {
+    public const string Read = "hmo-providers.read";
+    public const string Create = "hmo-providers.create";
+    public const string Update = "hmo-providers.update";
+    public const string Delete = "hmo-providers.delete";
+  }
+
+  public static class HmoPlans
+  {
+    public const string Read = "hmo-plans.read";
+    public const string Create = "hmo-plans.create";
+    public const string Update = "hmo-plans.update";
+    public const string Delete = "hmo-plans.delete";
   }
 
   // Every permission in one list, for seeding (Step 3) and for
@@ -82,8 +89,7 @@ public static class PermissionNames
     Employees.Create,
     Employees.Update,
     Employees.Delete,
-    Employees.PrivateRead,
-    Employees.UpdateWork,
+    Employees.WorkDetailsUpdate,
     Departments.Read,
     Departments.Create,
     Departments.Update,
@@ -100,14 +106,18 @@ public static class PermissionNames
     Locations.Create,
     Locations.Update,
     Locations.Delete,
-    Hmo.Read,
-    Hmo.Create,
-    Hmo.Update,
-    Hmo.Delete,
     Roles.Read,
     Roles.Create,
     Roles.Update,
     Roles.Delete,
     Roles.Assign,
+    HmoProviders.Read,
+    HmoProviders.Create,
+    HmoProviders.Update,
+    HmoProviders.Delete,
+    HmoPlans.Read,
+    HmoPlans.Create,
+    HmoPlans.Update,
+    HmoPlans.Delete,
   ];
 }

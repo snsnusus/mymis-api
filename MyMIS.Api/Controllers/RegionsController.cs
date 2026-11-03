@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
@@ -9,18 +10,19 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class RegionsController(RegionService regionService) : ControllerBase
 {
   private readonly RegionService _regionService = regionService;
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Locations.Read)]
   [HttpGet]
   public async Task<ActionResult<List<RegionResponseDto>>> GetAll()
   {
     return Ok(await _regionService.GetAllAsync());
   }
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Locations.Read)]
   [HttpGet("{id}")]
   public async Task<ActionResult<RegionResponseDto>> GetById(int id)
   {
@@ -29,7 +31,7 @@ public class RegionsController(RegionService regionService) : ControllerBase
     return Ok(region);
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Create)]
   [HttpPost]
   public async Task<ActionResult<RegionResponseDto>> Create(RegionCreateDto dto)
   {
@@ -37,7 +39,7 @@ public class RegionsController(RegionService regionService) : ControllerBase
     return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Update)]
   [HttpPut("{id}")]
   public async Task<ActionResult<RegionResponseDto>> Update(int id, RegionCreateDto dto)
   {
@@ -46,7 +48,7 @@ public class RegionsController(RegionService regionService) : ControllerBase
     return Ok(updated);
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Delete)]
   [HttpDelete("{id}")]
   public async Task<IActionResult> Delete(int id)
   {
@@ -55,7 +57,7 @@ public class RegionsController(RegionService regionService) : ControllerBase
     return NoContent();
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Create)]
   [HttpPost("bulk")]
   public async Task<ActionResult<BulkInsertResultDto>> BulkCreate([FromBody] List<JsonElement> rows)
   {

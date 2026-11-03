@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
@@ -9,9 +10,10 @@ namespace MyMIS.Api.Controllers;
 [ApiController]
 [Route("api/Employees")]
 [Authorize]
-public class EmployeeAddressesController(EmployeeAddressService service) : ControllerBase
+public class EmployeeAddressesController(EmployeeAddressService service, EmployeeAccessGuard employeeAccessGuard) : ControllerBase
 {
   private readonly EmployeeAddressService _service = service;
+  private readonly EmployeeAccessGuard _access = employeeAccessGuard;
 
   [HttpGet("me/addresses")]
   public async Task<ActionResult<List<EmployeeAddressResponseDto>>> GetMine()
@@ -49,34 +51,42 @@ public class EmployeeAddressesController(EmployeeAddressService service) : Contr
     return ToActionResult(result, _ => NoContent());
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Read)]
   [HttpGet("{id:int}/addresses")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<List<EmployeeAddressResponseDto>>> GetForEmployee(int id)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Read) is { } denied) return denied;
+
     var addresses = await _service.GetAllAsync(id);
     return addresses is null ? NotFound() : Ok(addresses);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPost("{id:int}/addresses")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmployeeAddressResponseDto>> CreateForEmployee(int id, EmployeeAddressCreateDto dto)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.CreateAsync(id, dto);
     return ToActionResult(result, value => StatusCode(StatusCodes.Status201Created, value));
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPut("{id:int}/addresses/{addressId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmployeeAddressResponseDto>> UpdateForEmployee(int id, int addressId, EmployeeAddressCreateDto dto)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.UpdateAsync(id, addressId, dto);
     return ToActionResult(result, value => Ok(value));
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpDelete("{id:int}/addresses/{addressId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<IActionResult> DeleteForEmployee(int id, int addressId)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.DeleteAsync(id, addressId);
     return ToActionResult(result, _ => NoContent());
   }

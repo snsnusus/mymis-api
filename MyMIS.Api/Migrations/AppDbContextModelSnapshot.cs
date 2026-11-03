@@ -248,13 +248,6 @@ namespace MyMIS.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("LegacyRole")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("User")
-                        .HasColumnName("Role");
-
                     b.Property<string>("MaritalStatus")
                         .IsRequired()
                         .HasColumnType("text");
@@ -592,21 +585,6 @@ namespace MyMIS.Api.Migrations
                     b.HasIndex("HobbyId");
 
                     b.ToTable("EmployeeHobbies");
-                });
-
-            modelBuilder.Entity("MyMIS.Api.Models.EmployeePermission", b =>
-                {
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PermissionId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("EmployeeId", "PermissionId");
-
-                    b.HasIndex("PermissionId");
-
-                    b.ToTable("EmployeePermissions");
                 });
 
             modelBuilder.Entity("MyMIS.Api.Models.EmployeePersonalDetail", b =>
@@ -1407,25 +1385,6 @@ namespace MyMIS.Api.Migrations
                     b.Navigation("Hobby");
                 });
 
-            modelBuilder.Entity("MyMIS.Api.Models.EmployeePermission", b =>
-                {
-                    b.HasOne("MyMIS.Api.Models.Employee", "Employee")
-                        .WithMany("EmployeePermissions")
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MyMIS.Api.Models.Permission", "Permission")
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("Permission");
-                });
-
             modelBuilder.Entity("MyMIS.Api.Models.EmployeePersonalDetail", b =>
                 {
                     b.HasOne("MyMIS.Api.Models.Employee", "Employee")
@@ -1553,8 +1512,6 @@ namespace MyMIS.Api.Migrations
                     b.Navigation("EmergencyContacts");
 
                     b.Navigation("EmployeeHobbies");
-
-                    b.Navigation("EmployeePermissions");
 
                     b.Navigation("GovernmentId");
 

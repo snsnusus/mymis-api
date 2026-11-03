@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Exceptions;
 using MyMIS.Api.Helpers;
@@ -14,6 +15,7 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EmployeesController(
   EmployeeService employeeService,
   EmergencyContactService emergencyContactService,
@@ -21,7 +23,8 @@ public class EmployeesController(
   EmployeeEmailService employeeEmailService,
   EmployeeHmoService employeeHmoService,
   EmployeePhoneService employeePhoneService,
-  IAuthorizationService authorizationService
+  IAuthorizationService authorizationService,
+  EmployeeAccessGuard employeeAccessGuard
 ) : ControllerBase
 {
   private readonly EmployeeService _employeeService = employeeService;
@@ -31,6 +34,7 @@ public class EmployeesController(
   private readonly EmployeeHmoService _employeeHmoService = employeeHmoService;
   private readonly EmployeePhoneService _employeePhoneService = employeePhoneService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
+  private readonly EmployeeAccessGuard _access = employeeAccessGuard;
 
   [Authorize]
   [HttpGet]
@@ -62,7 +66,7 @@ public class EmployeesController(
     return Ok(results);
   }
 
-  [Authorize(Policy = "employees.create")]
+  [Authorize(Policy = PermissionNames.Employees.Create)]
   [HttpGet("availability")]
   public async Task<ActionResult<UsernameAvailabilityResponseDto>> CheckAvailability(
   [FromQuery, Required, ValidUsername] string username)
@@ -82,7 +86,7 @@ public class EmployeesController(
     return Ok(employee);
   }
 
-  [Authorize(Policy = "employees.create")]
+  [Authorize(Policy = PermissionNames.Employees.Create)]
   [HttpPost]
   public async Task<ActionResult<EmployeeResponseDto>> Create(EmployeeCreateDto dto)
   {
@@ -156,16 +160,14 @@ public class EmployeesController(
     }
   }
 
-  [Authorize(Policy = "employees.update")]
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPut("{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> Update(int id, EmployeeUpdateDto dto)
   {
-    var canSeePrivateDetails = await CanSeePrivateDetailsAsync(id);
-    var employee = await _employeeService.GetByIdAsync(id, includePrivateDetails: canSeePrivateDetails);
-
-    if (employee is null)
+    // Existence (404) + gate 2 for this employee's department (403).
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied)
     {
-      return NotFound();
+      return denied;
     }
 
     if (!await _employeeService.IsUsernameAvailableAsync(dto.Username, excludeEmployeeId: id))
@@ -185,7 +187,7 @@ public class EmployeesController(
     }
   }
 
-  [Authorize(Roles = "SuperAdmin")]
+  [Authorize(Policy = PermissionNames.Employees.Delete)]
   [HttpDelete("{id}")]
   public async Task<IActionResult> Delete(int id)
   {
@@ -237,17 +239,16 @@ public class EmployeesController(
     return NoContent();
   }
 
-  [Authorize(Roles = "Admin,SuperAdmin")]
+  [Authorize(Policy = PermissionNames.Employees.WorkDetailsUpdate)]
   [HttpPut("partial/{id}")]
   public async Task<ActionResult<EmployeeResponseDto>> UpdatePartial(int id, EmployeePartialUpdateDto dto)
   {
-    var (exists, currentDepartmentId) = await _employeeService.GetExistenceAndDepartmentAsync(id);
-    if (!exists) return NotFound();
-
-    var targetDepartmentId = currentDepartmentId ?? -1;
-
-    var authResult = await _authorizationService.AuthorizeAsync(User, targetDepartmentId, "DepartmentScope");
-    if (!authResult.Succeeded) return Forbid();
+    // Existence (404) + gate 2 for this employee's department (403).
+    // MANAGER holds this department-scoped; HR holds it company-wide.
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.WorkDetailsUpdate) is { } denied)
+    {
+      return denied;
+    }
 
     var updated = await _employeeService.UpdatePartialAsync(id, dto);
     return Ok(updated);
@@ -331,12 +332,25 @@ public class EmployeesController(
   [RequestSizeLimit(5 * 1024 * 1024)]
   public async Task<IActionResult> UploadAvatar(int id, IFormFile file)
   {
-    var canUpdate = (await _authorizationService.AuthorizeAsync(User, "employees.update")).Succeeded;
-    var canCreate = (await _authorizationService.AuthorizeAsync(User, "employees.create")).Succeeded;
+    // Documented exception to "one permission per endpoint" (avatar design notes):
+    // the create flow uploads the new hire's photo in a second call, so an
+    // onboarding role (employees.create) must be able to do it too.
+    var canCreate = (await _authorizationService.AuthorizeAsync(
+      User, PermissionNames.Employees.Create)).Succeeded;
 
-    if (!canUpdate && !canCreate)
+    if (!canCreate)
     {
-      return Forbid();
+      // Gate 1 for update FIRST: someone with neither permission must get 403,
+      // not a 404 that would reveal whether employee {id} exists.
+      var canUpdate = (await _authorizationService.AuthorizeAsync(
+        User, PermissionNames.Employees.Update)).Succeeded;
+      if (!canUpdate) return Forbid();
+
+      // Gate 2 + existence for update holders.
+      if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied)
+      {
+        return denied;
+      }
     }
 
     if (file.Length == 0)
@@ -358,6 +372,10 @@ public class EmployeesController(
     }
   }
 
+  // The Lambda has no user login; the X-Internal-Secret header (checked below)
+  // is this endpoint's ONLY guard. [AllowAnonymous] opts it out of the
+  // class-level [Authorize], which would otherwise demand a JWT.
+  [AllowAnonymous]
   [HttpPatch("{id}/avatar-thumbnail")]
   public async Task<IActionResult> UpdateAvatarThumbnail(
     int id,
@@ -437,8 +455,6 @@ public class EmployeesController(
     return Conflict(problem);
   }
 
-  // Emergency contacts are visible to the employee themselves and to anyone
-  // who can create or update employees. SuperAdmin passes via PermissionHandler.
   private async Task<bool> CanSeePrivateDetailsAsync(int employeeId)
   {
     if (GetCurrentEmployeeId() == employeeId)
@@ -446,16 +462,9 @@ public class EmployeesController(
       return true;
     }
 
-    foreach (var policy in new[] { "employees.update", "employees.create" })
-    {
-      var result = await _authorizationService.AuthorizeAsync(User, policy);
-      if (result.Succeeded)
-      {
-        return true;
-      }
-    }
-
-    return false;
+    // employees.read is the HR-level "full record" permission (decision 5).
+    // The guard runs gate 2 for this employee's department; null = allowed.
+    return await _access.CheckAsync(User, employeeId, PermissionNames.Employees.Read) is null;
   }
 
   // The logged-in employee's ID, read from the JWT "sub" claim.

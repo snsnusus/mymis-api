@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
@@ -9,9 +10,10 @@ namespace MyMIS.Api.Controllers;
 [ApiController]
 [Route("api/Employees")]
 [Authorize]
-public class EmployeePhonesController(EmployeePhoneService service) : ApiControllerBase
+public class EmployeePhonesController(EmployeePhoneService service, EmployeeAccessGuard employeeAccessGuard) : ApiControllerBase
 {
   private readonly EmployeePhoneService _service = service;
+  private readonly EmployeeAccessGuard _access = employeeAccessGuard;
 
   [HttpGet("me/phones")]
   public async Task<ActionResult<List<EmployeePhoneResponseDto>>> GetMine()
@@ -68,42 +70,52 @@ public class EmployeePhonesController(EmployeePhoneService service) : ApiControl
     return ToActionResult(result, _ => NoContent());
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Read)]
   [HttpGet("{id:int}/phones")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<List<EmployeePhoneResponseDto>>> GetForEmployee(int id)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Read) is { } denied) return denied;
+
     var phones = await _service.GetAllAsync(id);
     return phones is null ? NotFound() : Ok(phones);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Read)]
   [HttpGet("{id:int}/phones/{phoneId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmployeePhoneResponseDto>> GetByIdForEmployee(int id, int phoneId)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Read) is { } denied) return denied;
+
     var phone = await _service.GetByIdAsync(id, phoneId);
     return phone is null ? NotFound() : Ok(phone);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPost("{id:int}/phones")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmployeePhoneResponseDto>> CreateForEmployee(int id, EmployeePhoneCreateDto dto)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.CreateAsync(id, dto);
     return ToActionResult(result, value => StatusCode(StatusCodes.Status201Created, value));
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpPut("{id:int}/phones/{phoneId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<ActionResult<EmployeePhoneResponseDto>> UpdateForEmployee(int id, int phoneId, EmployeePhoneCreateDto dto)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.UpdateAsync(id, phoneId, dto);
     return ToActionResult(result, Ok);
   }
 
+  [Authorize(Policy = PermissionNames.Employees.Update)]
   [HttpDelete("{id:int}/phones/{phoneId:int}")]
-  [Authorize(Policy = "employees.update")]
   public async Task<IActionResult> DeleteForEmployee(int id, int phoneId)
   {
+    if (await _access.CheckAsync(User, id, PermissionNames.Employees.Update) is { } denied) return denied;
+
     var result = await _service.DeleteAsync(id, phoneId);
     return ToActionResult(result, _ => NoContent());
   }

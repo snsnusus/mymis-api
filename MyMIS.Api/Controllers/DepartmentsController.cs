@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Services;
 
@@ -7,19 +8,20 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class DepartmentsController(DepartmentService departmentService, IAuthorizationService authorizationService) : ControllerBase
 {
   private readonly DepartmentService _departmentService = departmentService;
   private readonly IAuthorizationService _authorizationService = authorizationService;
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Departments.Read)]
   [HttpGet]
   public async Task<ActionResult<List<DepartmentSummaryResponseDto>>> GetAll()
   {
     return Ok(await _departmentService.GetAllAsync());
   }
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Departments.Read)]
   [HttpGet("{id}")]
   public async Task<ActionResult<DepartmentResponseDto>> GetById(int id)
   {
@@ -28,7 +30,7 @@ public class DepartmentsController(DepartmentService departmentService, IAuthori
     return Ok(department);
   }
 
-  [Authorize(Roles = "Admin,SuperAdmin")]
+  [Authorize(Policy = PermissionNames.Departments.Create)]
   [HttpPost]
   public async Task<ActionResult<DepartmentResponseDto>> Create(DepartmentCreateDto dto)
   {
@@ -36,21 +38,21 @@ public class DepartmentsController(DepartmentService departmentService, IAuthori
     return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
   }
 
-  [Authorize(Roles = "Admin,SuperAdmin")]
+  [Authorize(Policy = PermissionNames.Departments.Update)]
   [HttpPut("{id}")]
   public async Task<ActionResult<DepartmentResponseDto>> Update(int id, DepartmentCreateDto dto)
   {
     var existing = await _departmentService.GetByIdAsync(id);
     if (existing is null) return NotFound();
 
-    var authResult = await _authorizationService.AuthorizeAsync(User, id, "DepartmentScope");
+    var authResult = await _authorizationService.AuthorizeAsync(User, id, PermissionNames.Departments.Update);
     if (!authResult.Succeeded) return Forbid();
 
     var updated = await _departmentService.UpdateAsync(id, dto);
     return Ok(updated);
   }
 
-  [Authorize(Roles = "SuperAdmin")]
+  [Authorize(Policy = PermissionNames.Departments.Delete)]
   [HttpDelete("{id}")]
   public async Task<IActionResult> Delete(int id)
   {

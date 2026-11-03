@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
@@ -9,18 +10,19 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class BarangaysController(BarangayService barangayService) : ControllerBase
 {
   private readonly BarangayService _barangayService = barangayService;
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Locations.Read)]
   [HttpGet]
   public async Task<ActionResult<List<BarangayResponseDto>>> GetAll([FromQuery] int? cityId)
   {
     return Ok(await _barangayService.GetAllAsync(cityId));
   }
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Locations.Read)]
   [HttpGet("{id}")]
   public async Task<ActionResult<BarangayResponseDto>> GetById(int id)
   {
@@ -29,7 +31,7 @@ public class BarangaysController(BarangayService barangayService) : ControllerBa
     return Ok(barangay);
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Create)]
   [HttpPost]
   public async Task<ActionResult<BarangayResponseDto>> Create(BarangayCreateDto dto)
   {
@@ -37,7 +39,7 @@ public class BarangaysController(BarangayService barangayService) : ControllerBa
     return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Update)]
   [HttpPut("{id}")]
   public async Task<ActionResult<BarangayResponseDto>> Update(int id, BarangayCreateDto dto)
   {
@@ -46,7 +48,7 @@ public class BarangaysController(BarangayService barangayService) : ControllerBa
     return Ok(updated);
   }
 
-  [Authorize(Policy = "locations.manage")]
+  [Authorize(Policy = PermissionNames.Locations.Delete)]
   [HttpDelete("{id}")]
   public async Task<IActionResult> Delete(int id)
   {
@@ -55,8 +57,8 @@ public class BarangaysController(BarangayService barangayService) : ControllerBa
     return NoContent();
   }
 
+  [Authorize(Policy = PermissionNames.Locations.Create)]
   [HttpPost("bulk")]
-  [Authorize(Policy = "locations.manage")]
   public async Task<ActionResult<BulkInsertResultDto>> BulkCreate(
     [FromQuery] int? cityId,
     [FromBody] List<JsonElement> rows)

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
 using MyMIS.Api.Services;
 
@@ -7,18 +8,19 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class OfficesController(OfficeService officeService) : ControllerBase
 {
   private readonly OfficeService _officeService = officeService;
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Offices.Read)]
   [HttpGet]
   public async Task<ActionResult<List<OfficeResponseDto>>> GetAll()
   {
     return Ok(await _officeService.GetAllAsync());
   }
 
-  [Authorize]
+  [Authorize(Policy = PermissionNames.Offices.Read)]
   [HttpGet("{id:int}")]
   public async Task<ActionResult<OfficeResponseDto>> GetById(int id)
   {
@@ -27,7 +29,7 @@ public class OfficesController(OfficeService officeService) : ControllerBase
     return Ok(office);
   }
 
-  [Authorize(Policy = "offices.manage")]
+  [Authorize(Policy = PermissionNames.Offices.Create)]
   [HttpPost]
   public async Task<ActionResult<OfficeResponseDto>> Create(OfficeCreateDto dto)
   {
@@ -40,7 +42,7 @@ public class OfficesController(OfficeService officeService) : ControllerBase
     return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
   }
 
-  [Authorize(Policy = "offices.manage")]
+  [Authorize(Policy = PermissionNames.Offices.Update)]
   [HttpPut("{id:int}")]
   public async Task<ActionResult<OfficeResponseDto>> Update(int id, OfficeCreateDto dto)
   {
@@ -56,7 +58,7 @@ public class OfficesController(OfficeService officeService) : ControllerBase
     return Ok(updated);
   }
 
-  [Authorize(Policy = "offices.manage")]
+  [Authorize(Policy = PermissionNames.Offices.Delete)]
   [HttpDelete("{id:int}")]
   public async Task<IActionResult> Delete(int id)
   {

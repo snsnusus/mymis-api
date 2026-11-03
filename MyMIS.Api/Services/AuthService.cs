@@ -20,8 +20,6 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
     var username = UsernameRules.Normalize(dto.Username);
 
     var employee = await _context.Employees
-        .Include(e => e.EmployeePermissions)
-        .ThenInclude(ep => ep.Permission)
         .FirstOrDefaultAsync(e => e.Username == username);
 
     if (employee is null || !BCrypt.Net.BCrypt.Verify(dto.Password, employee.PasswordHash))
@@ -55,8 +53,6 @@ public class AuthService(AppDbContext context, TokenService tokenService, IOptio
 
     var existingToken = await _context.RefreshTokens
         .Include(rt => rt.Employee)
-        .ThenInclude(e => e.EmployeePermissions)
-        .ThenInclude(ep => ep.Permission)
         .FirstOrDefaultAsync(rt => rt.TokenHash == incomingHash);
 
     if (existingToken is null)

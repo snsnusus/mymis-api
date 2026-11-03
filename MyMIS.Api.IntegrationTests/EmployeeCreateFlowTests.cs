@@ -82,7 +82,7 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
   private static Task<HttpResponseMessage> PostAsync(HttpClient client, NewEmployee request) =>
     client.PostAsJsonAsync("/api/Employees", request.Body);
 
-  private Task<HttpClient> CreatorClientAsync() => factory.GetClientAsync(LegacyRole.User, "employees.create");
+  private Task<HttpClient> CreatorClientAsync() => factory.GetClientAsync("employees.create");
 
   private Task<Employee?> FindEmployeeAsync(string username) =>
     factory.QueryDbAsync(db =>
@@ -458,7 +458,7 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
     using var json = await ReadJsonAsync(response);
     var id = json.RootElement.GetProperty("id").GetInt32();
 
-    var superAdmin = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var superAdmin = await factory.GetSuperAdminClientAsync();
     var deleteResponse = await superAdmin.DeleteAsync($"/api/Employees/{id}");
     await HttpAssert.StatusAsync(HttpStatusCode.NoContent, deleteResponse);
 
@@ -495,7 +495,7 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
     using var created = await ReadJsonAsync(response);
     var id = created.RootElement.GetProperty("id").GetInt32();
 
-    var superAdmin = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var superAdmin = await factory.GetSuperAdminClientAsync();
     var deleteResponse = await superAdmin.DeleteAsync($"/api/Employees/{id}");
     await HttpAssert.StatusAsync(HttpStatusCode.NoContent, deleteResponse);
 

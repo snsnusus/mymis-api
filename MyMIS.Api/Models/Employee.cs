@@ -45,8 +45,6 @@ public class Employee
 
   public string? AvatarThumbnailUrl { get; set; }
 
-  public LegacyRole LegacyRole { get; set; } = LegacyRole.User;
-
   public required string EmployeeCode { get; set; } // was "employeeId" in your JSON
 
   public int? DepartmentId { get; set; }
@@ -70,8 +68,6 @@ public class Employee
   public EmployeePersonalDetail? PersonalDetail { get; set; }
 
   public ICollection<EmployeeHobby> EmployeeHobbies { get; set; } = [];
-
-  public ICollection<EmployeePermission> EmployeePermissions { get; set; } = [];
 
   public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];
 

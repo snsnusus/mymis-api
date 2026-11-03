@@ -53,22 +53,10 @@ public class ApiConflictTests(ApiFactory factory)
     Assert.Equal(message, Assert.Single(errors.EnumerateArray()).GetString());
   }
 
-  // A logged-in client whose employee belongs to the given department (the token carries a departmentId claim).
-  private async Task<HttpClient> ClientInDepartmentAsync(int departmentId, params string[] permissions)
-  {
-    var employee = await factory.SeedEmployeeAsync(LegacyRole.User, permissions);
-
-    await factory.ExecuteDbAsync(async db =>
-      await db.Employees
-        .Where(e => e.Id == employee.Id)
-        .ExecuteUpdateAsync(set => set.SetProperty(e => e.DepartmentId, departmentId)));
-
-    // Log in after the update, so the new token includes the department
-    var token = await factory.LoginAsync(employee.Username);
-    var client = factory.CreateApiClient();
-    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-    return client;
-  }
+  // A logged-in client in `departmentId`, holding the permissions DEPARTMENT-scoped.
+  // The token carries the departmentId claim that gate 2 compares against.
+  private Task<HttpClient> ClientInDepartmentAsync(int departmentId, params string[] permissions) =>
+    factory.CreateDepartmentScopedClientAsync(departmentId, permissions);
 
   // ---------------- 409 from the real index, through the filter ----------------
 
@@ -76,7 +64,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostPosition_SameSlugInTheSameDepartment_Returns409()
   {
     // Arrange: positions have no pre-check, so this 409 can only come from the index and the filter
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var department = await factory.SeedDepartmentAsync();
     var slug = $"P{Unique()}";
 
@@ -94,7 +82,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostPosition_SameSlugInAnotherDepartment_IsAllowed()
   {
     // Arrange: the index is per department, not company-wide
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var slug = $"P{Unique()}";
     var firstDepartment = await factory.SeedDepartmentAsync();
     var secondDepartment = await factory.SeedDepartmentAsync();
@@ -113,7 +101,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostCity_SameNameInTheSameRegion_Returns409()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var region = await factory.SeedRegionAsync();
     var city = new { name = $"City {Unique()}", regionId = region.Id };
 
@@ -130,7 +118,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostCity_SameNameInAnotherRegion_IsAllowed()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var name = $"City {Unique()}";
     var firstRegion = await factory.SeedRegionAsync();
     var secondRegion = await factory.SeedRegionAsync();
@@ -150,7 +138,7 @@ public class ApiConflictTests(ApiFactory factory)
   public async Task PostBarangay_SameNameInTheSameCity_Returns409()
   {
     // Arrange
-    var client = await factory.GetClientAsync(LegacyRole.SuperAdmin);
+    var client = await factory.GetSuperAdminClientAsync();
     var city = await factory.SeedCityAsync(await factory.SeedRegionAsync());
     var barangay = new { name = $"Barangay {Unique()}", cityId = city.Id };
 
@@ -163,7 +151,7 @@ public class ApiConflictTests(ApiFactory factory)
     await AssertUniqueConflictAsync(second, "IX_Barangays_CityId_Name");
   }
 
-  // ---------------- Positions: the second gate (SameDepartment) ----------------
+  // ---------------- Positions: gate 2 (department-scoped permissions) ----------------
 
   [Fact]
   public async Task PostPosition_UserWithThePermissionInTheSameDepartment_Returns201()
