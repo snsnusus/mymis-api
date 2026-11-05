@@ -248,7 +248,7 @@ public class EmployeeAddressService(AppDbContext context)
     await _context.SaveChangesAsync();
   }
 
-  private static EmployeeAddressResponseDto MapToResponse(EmployeeAddress a) => new()
+  public static EmployeeAddressResponseDto MapToResponse(EmployeeAddress a) => new()
   {
     Id = a.Id,
     Type = a.Type,

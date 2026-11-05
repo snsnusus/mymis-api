@@ -79,14 +79,7 @@ public class EmployeesController(
 
   [Authorize]
   [HttpGet("{id}")]
-  public async Task<ActionResult<EmployeeResponseDto>> GetById(int id)
-  {
-    var canSeeContacts = await CanSeePrivateDetailsAsync(id);
-    var employee = await _employeeService.GetByIdAsync(id, includePrivateDetails: canSeeContacts);
-
-    if (employee is null) return NotFound();
-    return Ok(employee);
-  }
+  public Task<IActionResult> GetById(int id) => EmployeeViewAsync(id);
 
   [Authorize(Policy = PermissionNames.Employees.Create)]
   [HttpPost]
@@ -264,7 +257,7 @@ public class EmployeesController(
 
   [Authorize(Policy = PermissionNames.Employees.WorkDetailsUpdate)]
   [HttpPut("partial/{id}")]
-  public async Task<ActionResult<EmployeeResponseDto>> UpdatePartial(int id, EmployeePartialUpdateDto dto)
+  public async Task<IActionResult> UpdatePartial(int id, EmployeePartialUpdateDto dto)
   {
     // Existence (404) + gate 2 for this employee's department (403).
     // MANAGER holds this department-scoped; HR holds it company-wide.
@@ -273,8 +266,8 @@ public class EmployeesController(
       return denied;
     }
 
-    var updated = await _employeeService.UpdatePartialAsync(id, dto);
-    return Ok(updated);
+    await _employeeService.UpdatePartialAsync(id, dto);
+    return await EmployeeViewAsync(id);
   }
 
   [Authorize]
@@ -507,6 +500,22 @@ public class EmployeesController(
     // employees.read is the HR-level "full record" permission (decision 5).
     // The guard runs gate 2 for this employee's department; null = allowed.
     return await _access.CheckAsync(User, employeeId, PermissionNames.Employees.Read) is null;
+  }
+
+  /// <summary>
+  /// The view of employee <paramref name="id"/> this caller may see: the full record for
+  /// the employee themselves or <c>employees.read</c> in scope, the partial profile otherwise.
+  /// </summary>
+  private async Task<IActionResult> EmployeeViewAsync(int id)
+  {
+    if (await CanSeePrivateDetailsAsync(id))
+    {
+      var full = await _employeeService.GetByIdAsync(id, includePrivateDetails: true);
+      return full is null ? NotFound() : Ok(full);
+    }
+
+    var profile = await _employeeService.GetProfileAsync(id);
+    return profile is null ? NotFound() : Ok(profile);
   }
 
   // The logged-in employee's ID, read from the JWT "sub" claim.

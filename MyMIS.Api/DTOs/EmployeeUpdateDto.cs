@@ -24,6 +24,12 @@ public class EmployeeUpdateDto
 
   public DateOnly? Birthdate { get; set; }
 
+  /// <summary>Shows gender to other employees. <c>null</c> keeps the current value.</summary>
+  public bool? ShowGenderInProfile { get; set; }
+
+  /// <summary>Shows the birthday (month and day) to other employees. <c>null</c> keeps the current value.</summary>
+  public bool? ShowBirthdayInProfile { get; set; }
+
   [Required, ValidUsername]
   public string Username { get; set; } = string.Empty;
 

@@ -17,7 +17,4 @@ public class EmployeePersonalDetailCreateDto
   public string? Religion { get; set; }
 
   public string? Bio { get; set; }
-
-  // null (not sent) = on create: visible (default); on update: keep the current value.
-  public bool? ShowInProfile { get; set; }
 }

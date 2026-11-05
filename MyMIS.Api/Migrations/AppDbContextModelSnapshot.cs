@@ -273,6 +273,12 @@ namespace MyMIS.Api.Migrations
                     b.Property<int>("RoleId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("ShowBirthdayInProfile")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowGenderInProfile")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Suffix")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -618,9 +624,6 @@ namespace MyMIS.Api.Migrations
                     b.Property<string>("Religion")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("ShowInProfile")
-                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

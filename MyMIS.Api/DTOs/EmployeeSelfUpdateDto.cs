@@ -18,6 +18,9 @@ public class EmployeeSelfUpdateDto
 
   public string? Bio { get; set; }
 
-  // null (not sent) = on create: visible (default); on update: keep the current value.
-  public bool? ShowInProfile { get; set; }
+  /// <summary>Shows gender to other employees. <c>null</c> keeps the current value.</summary>
+  public bool? ShowGenderInProfile { get; set; }
+
+  /// <summary>Shows the birthday (month and day) to other employees. <c>null</c> keeps the current value.</summary>
+  public bool? ShowBirthdayInProfile { get; set; }
 }

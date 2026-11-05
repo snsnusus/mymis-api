@@ -17,7 +17,7 @@ public class EmployeeEmailService(AppDbContext context)
     _context.EmployeeEmails.AsNoTracking()
       .Where(ee => ee.EmployeeId == employeeId);
 
-  private static EmployeeEmailResponseDto MapToResponse(EmployeeEmail ee) => new()
+  public static EmployeeEmailResponseDto MapToResponse(EmployeeEmail ee) => new()
   {
     Id = ee.Id,
     Ownership = ee.Ownership,

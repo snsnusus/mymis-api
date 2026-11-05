@@ -213,7 +213,7 @@ public class EmployeePhoneService(AppDbContext context)
     return employeePhone;
   }
 
-  private static EmployeePhoneResponseDto MapToResponse(EmployeePhone ep) => new()
+  public static EmployeePhoneResponseDto MapToResponse(EmployeePhone ep) => new()
   {
     Id = ep.Id,
     Ownership = ep.Ownership,

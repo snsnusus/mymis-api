@@ -130,7 +130,13 @@ public class EmployeeService(
         .Include(e => e.EmergencyContacts)
           .ThenInclude(c => c.Address!.Barangay)
             .ThenInclude(b => b.City)
-              .ThenInclude(city => city.Region);
+              .ThenInclude(city => city.Region)
+        .Include(e => e.Phones.OrderByDescending(p => p.IsPrimary).ThenBy(p => p.CreatedAt))
+        .Include(e => e.Emails.OrderByDescending(em => em.IsPrimary).ThenBy(em => em.CreatedAt))
+        .Include(e => e.Addresses.OrderByDescending(a => a.IsPrimary).ThenBy(a => a.CreatedAt))
+            .ThenInclude(a => a.Address.Barangay)
+                .ThenInclude(b => b.City)
+                    .ThenInclude(city => city.Region);
     }
 
     var employee = await query.AsSplitQuery().FirstOrDefaultAsync(e => e.Id == id);
@@ -149,7 +155,12 @@ public class EmployeeService(
       AvatarStyle = employee.AvatarStyle,
       Gender = employee.Gender,
       Birthdate = employee.Birthdate,
+      ShowGenderInProfile = employee.ShowGenderInProfile,
+      ShowBirthdayInProfile = employee.ShowBirthdayInProfile,
       MaritalStatus = employee.MaritalStatus,
+      Phones = includePrivateDetails ? [.. employee.Phones.Select(EmployeePhoneService.MapToResponse)] : null,
+      Emails = includePrivateDetails ? [.. employee.Emails.Select(EmployeeEmailService.MapToResponse)] : null,
+      Addresses = includePrivateDetails ? [.. employee.Addresses.Select(EmployeeAddressService.MapToResponse)] : null,
       Username = employee.Username,
       EmployeeCode = employee.EmployeeCode,
       EmployeeType = employee.EmployeeType,
@@ -167,7 +178,6 @@ public class EmployeeService(
         BloodType = employee.PersonalDetail.BloodType,
         Religion = employee.PersonalDetail.Religion,
         Bio = employee.PersonalDetail.Bio,
-        ShowInProfile = employee.PersonalDetail.ShowInProfile,
       },
       Position = employee.Position is null ? null : new EmployeePositionDto
       {
@@ -204,6 +214,88 @@ public class EmployeeService(
     return responseDto;
   }
 
+  /// <summary>
+  /// The partial profile another employee sees. Hidden rows are filtered in the query,
+  /// so they never leave the database.
+  /// </summary>
+  public async Task<EmployeeProfileDto?> GetProfileAsync(int id)
+  {
+    var employee = await _context.Employees
+        .AsNoTracking()
+        .Include(e => e.Department)
+        .Include(e => e.Position)
+        .Include(e => e.PersonalDetail)
+        .Include(e => e.EmployeeHobbies)
+            .ThenInclude(eh => eh.Hobby)
+        .Include(e => e.Phones
+            .Where(p => p.Ownership == ContactOwnership.Corporate || p.ShowInProfile)
+            .OrderByDescending(p => p.IsPrimary)
+            .ThenBy(p => p.CreatedAt))
+        .Include(e => e.Emails
+            .Where(em => em.Ownership == ContactOwnership.Corporate || em.ShowInProfile)
+            .OrderByDescending(em => em.IsPrimary)
+            .ThenBy(em => em.CreatedAt))
+        .Include(e => e.Addresses.Where(a => a.ShowInProfile))
+            .ThenInclude(a => a.Address.Barangay)
+                .ThenInclude(b => b.City)
+                    .ThenInclude(city => city.Region)
+        .AsSplitQuery()
+        .FirstOrDefaultAsync(e => e.Id == id);
+
+    if (employee is null) return null;
+
+    var profile = new EmployeeProfileDto
+    {
+      Id = employee.Id,
+      FirstName = employee.FirstName,
+      MiddleName = employee.MiddleName,
+      LastName = employee.LastName,
+      Suffix = employee.Suffix,
+      AvatarUrl = employee.AvatarUrl,
+      AvatarThumbnailUrl = employee.AvatarThumbnailUrl,
+      AvatarStyle = employee.AvatarStyle,
+      EmployeeCode = employee.EmployeeCode,
+      DepartmentId = employee.DepartmentId,
+      DepartmentName = employee.Department?.Name,
+      Position = employee.Position is null ? null : new EmployeePositionDto
+      {
+        Id = employee.Position.Id,
+        Title = employee.Position.Title,
+        Slug = employee.Position.Slug,
+        Description = employee.Position.Description,
+        IsActive = employee.Position.IsActive,
+        IsApprover = employee.Position.IsApprover,
+      },
+      OfficeLocation = employee.OfficeLocation,
+      WorkSchedule = employee.WorkSchedule,
+      JoiningDate = employee.JoiningDate,
+      Nickname = employee.PersonalDetail?.Nickname,
+      Bio = employee.PersonalDetail?.Bio,
+      Hobbies = [.. employee.EmployeeHobbies.Select(eh => new HobbyResponseDto { Id = eh.Hobby.Id, Name = eh.Hobby.Name })],
+      Phones = [.. employee.Phones.Select(EmployeePhoneService.MapToResponse)],
+      Emails = [.. employee.Emails.Select(EmployeeEmailService.MapToResponse)],
+      Locations = [.. employee.Addresses
+          .Select(a => new EmployeeProfileLocationDto(a.Address.Barangay.City.Name, a.Address.Barangay.City.Region.Name))
+          .Distinct()],
+      Gender = employee.ShowGenderInProfile ? employee.Gender : null,
+      Birthday = employee.ShowBirthdayInProfile && employee.Birthdate is DateOnly birthdate
+          ? new EmployeeBirthdayDto(birthdate.Month, birthdate.Day)
+          : null,
+    };
+
+    if (!string.IsNullOrEmpty(profile.AvatarUrl))
+    {
+      profile.AvatarUrl = _s3UploadService.GetPresignedUrl(profile.AvatarUrl);
+    }
+
+    if (!string.IsNullOrEmpty(profile.AvatarThumbnailUrl))
+    {
+      profile.AvatarThumbnailUrl = _s3UploadService.GetPresignedUrl(profile.AvatarThumbnailUrl);
+    }
+
+    return profile;
+  }
+
   public async Task<EmployeeResponseDto> CreateAsync(EmployeeCreateDto dto, int createdById)
   {
     var employeeCode = await _employeeCodeGenerator.GenerateAsync();
@@ -237,7 +329,6 @@ public class EmployeeService(
         BloodType = dto.PersonalDetail?.BloodType,
         Religion = dto.PersonalDetail?.Religion,
         Bio = dto.PersonalDetail?.Bio,
-        ShowInProfile = dto.PersonalDetail?.ShowInProfile ?? true,
       }
     };
 
@@ -345,11 +436,14 @@ public class EmployeeService(
     employee.PersonalDetail.Religion = dto.PersonalDetail?.Religion;
     employee.PersonalDetail.Bio = dto.PersonalDetail?.Bio;
 
-    // Unlike the text fields above (omitted = cleared to null), an omitted flag
-    // keeps the current value, so an older client can't hide or show the block by accident.
-    if (dto.PersonalDetail?.ShowInProfile is bool show)
+    if (dto.ShowGenderInProfile is bool showGender)
     {
-      employee.PersonalDetail.ShowInProfile = show;
+      employee.ShowGenderInProfile = showGender;
+    }
+
+    if (dto.ShowBirthdayInProfile is bool showBirthday)
+    {
+      employee.ShowBirthdayInProfile = showBirthday;
     }
 
     await SaveChangesCheckingUsernameAsync();
@@ -372,9 +466,14 @@ public class EmployeeService(
     employee.PersonalDetail.Religion = dto.Religion;
     employee.PersonalDetail.Bio = dto.Bio;
 
-    if (dto.ShowInProfile is bool show)
+    if (dto.ShowGenderInProfile is bool showGender)
     {
-      employee.PersonalDetail.ShowInProfile = show;
+      employee.ShowGenderInProfile = showGender;
+    }
+
+    if (dto.ShowBirthdayInProfile is bool showBirthday)
+    {
+      employee.ShowBirthdayInProfile = showBirthday;
     }
 
     await _context.SaveChangesAsync();

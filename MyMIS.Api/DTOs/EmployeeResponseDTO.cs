@@ -26,9 +26,24 @@ public class EmployeeResponseDto
 
   public DateOnly? Birthdate { get; set; }
 
+  public bool ShowGenderInProfile { get; set; }
+
+  public bool ShowBirthdayInProfile { get; set; }
+
   public string MaritalStatus { get; set; } = string.Empty;
 
+  [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+  public List<EmployeePhoneResponseDto>? Phones { get; set; }
+
+  [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+  public List<EmployeeEmailResponseDto>? Emails { get; set; }
+
+
+  [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+  public List<EmployeeAddressResponseDto>? Addresses { get; set; }
+
   public string Username { get; set; } = string.Empty;
+
   public string EmployeeCode { get; set; } = string.Empty;
 
   [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -46,6 +61,7 @@ public class EmployeeResponseDto
   public int? DepartmentId { get; set; }
 
   public string? DepartmentName { get; set; }
+
   public EmployeePositionDto? Position { get; set; }
 
   public EmployeePersonalDetailDto? PersonalDetail { get; set; }
@@ -55,5 +71,4 @@ public class EmployeeResponseDto
   public List<EmergencyContactResponseDto>? EmergencyContacts { get; set; }
 
   public EmployeeGovernmentIdResponseDto? GovernmentIds { get; set; }
-
 }

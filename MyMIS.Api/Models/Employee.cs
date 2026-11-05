@@ -29,6 +29,12 @@ public class Employee
 
   public DateOnly? Birthdate { get; set; }
 
+  /// <summary>Shows <c><see cref="Gender"/></c> to other employees. Hidden by default; the employee opts in.</summary>
+  public bool ShowGenderInProfile { get; set; }
+
+  /// <summary>Shows the month and day of <c><see cref="Birthdate"/></c> (never the year) to other employees. Hidden by default.</summary>
+  public bool ShowBirthdayInProfile { get; set; }
+
   public required string MaritalStatus { get; set; }
 
   [Required]

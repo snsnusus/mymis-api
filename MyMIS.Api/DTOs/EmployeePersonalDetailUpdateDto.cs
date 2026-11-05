@@ -17,6 +17,4 @@ public class EmployeePersonalDetailUpdateDto
   public string? Religion { get; set; }
 
   public string? Bio { get; set; }
-
-  public bool? ShowInProfile { get; set; }
 }
