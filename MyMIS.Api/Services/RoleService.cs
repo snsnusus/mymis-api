@@ -126,6 +126,7 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
       {
         Name = name,
         CompanyOnly = PermissionNames.CompanyOnly.Contains(name),
+        Customizable = PermissionNames.Customizable.Contains(name)
       })];
 
   // ---------------- read ----------------

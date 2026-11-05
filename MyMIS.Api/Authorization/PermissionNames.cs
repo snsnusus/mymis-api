@@ -143,4 +143,21 @@ public static class PermissionNames
     Roles.Delete,
     Roles.Assign,
   };
+
+  /// <summary>
+  /// Permissions HR may grant in a custom role created during employee creation.
+  /// Always granted at <c>Department</c> scope; company-wide grants belong on the Roles page.
+  /// </summary>
+  public static readonly IReadOnlySet<string> Customizable = new HashSet<string>
+  {
+    Employees.Read,
+    Employees.WorkDetailsUpdate,
+    Departments.Read,
+    Departments.Update,
+    Positions.Read,
+    Positions.Create,
+    Positions.Update,
+    Offices.Read,
+    Locations.Read,
+  };
 }

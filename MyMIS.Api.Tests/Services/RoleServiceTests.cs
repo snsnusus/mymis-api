@@ -629,4 +629,13 @@ public class RoleServiceTests : IDisposable
     Assert.True(catalog.Single(p => p.Name == PermissionNames.Employees.Create).CompanyOnly);
     Assert.False(catalog.Single(p => p.Name == PermissionNames.Employees.Read).CompanyOnly);
   }
+
+  [Fact]
+  public void GetPermissionCatalog_FlagsCustomizablePermissions()
+  {
+    var catalog = RoleService.GetPermissionCatalog();
+
+    Assert.True(catalog.Single(p => p.Name == PermissionNames.Employees.Read).Customizable);
+    Assert.False(catalog.Single(p => p.Name == PermissionNames.Employees.Update).Customizable);
+  }
 }
