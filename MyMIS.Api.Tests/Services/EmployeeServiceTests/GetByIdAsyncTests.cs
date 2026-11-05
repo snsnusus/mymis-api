@@ -249,4 +249,18 @@ public class GetByIdAsyncTests : EmployeeServiceTestBase
       Assert.Null(result.EmergencyContacts);
     }
   }
+
+  [Fact]
+  public async Task GetByIdAsync_ReturnsGenderAndBirthdayFlags()
+  {
+    var employee = NewEmployee("Juan", "Cruz", "EMP-001");
+    employee.ShowBirthdayInProfile = true;
+    _context.Employees.Add(employee);
+    await _context.SaveChangesAsync();
+
+    var result = await _service.GetByIdAsync(employee.Id, includePrivateDetails: true);
+
+    Assert.False(result!.ShowGenderInProfile);
+    Assert.True(result.ShowBirthdayInProfile);
+  }
 }

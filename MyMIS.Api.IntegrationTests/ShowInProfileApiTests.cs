@@ -132,28 +132,4 @@ public class ShowInProfileApiTests(ApiFactory factory)
     await HttpAssert.StatusAsync(HttpStatusCode.OK, response);
     Assert.False((await SavedEmailAsync(email.Id)).ShowInProfile);
   }
-
-  [Fact]
-  public async Task Employee_PutMeWithShowInProfileFalse_HidesPersonalDetails()
-  {
-    // Arrange: a seeded employee has no personal-details row yet; PUT /me creates it
-    var employee = await factory.SeedEmployeeAsync();
-    using var client = await factory.CreateClientForAsync(employee);
-
-    // Act
-    var response = await client.PutAsJsonAsync("/api/Employees/me", new
-    {
-      nickname = "Jun",
-      showInProfile = false,
-    });
-
-    // Assert
-    await HttpAssert.StatusAsync(HttpStatusCode.OK, response);
-    var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-    Assert.False(body.GetProperty("personalDetail").GetProperty("showInProfile").GetBoolean());
-
-    var saved = await factory.QueryDbAsync(db =>
-      db.EmployeePersonalDetails.AsNoTracking().SingleAsync(pd => pd.EmployeeId == employee.Id));
-    Assert.False(saved.ShowInProfile);
-  }
 }

@@ -704,124 +704,67 @@ public class UpdateAsyncTests : EmployeeServiceTestBase
     Assert.Null(updateResult.WorkSchedule);
   }
 
-  // ---------- ShowInProfile (Step 9) ----------
-
-  // An employee whose personal details are HIDDEN, with a nickname and a bio.
-  private async Task<Employee> SeedHiddenPersonalDetailAsync()
+  private async Task<Employee> SeedEmployeeWithFlagsAsync(bool showGender = false, bool showBirthday = false)
   {
     var employee = NewEmployee("Juan", "Cruz", "EMP-001");
-    employee.PersonalDetail = new EmployeePersonalDetail
-    {
-      Nickname = "Jun",
-      Bio = "Hello!",
-      ShowInProfile = false,
-    };
+    employee.ShowGenderInProfile = showGender;
+    employee.ShowBirthdayInProfile = showBirthday;
 
     _context.Employees.Add(employee);
     await _context.SaveChangesAsync();
     return employee;
   }
 
-  [Fact]
-  public async Task UpdateAsync_ShowInProfileOmitted_KeepsHiddenWhileOmittedTextFieldsAreCleared()
-  {
-    // Arrange
-    var employee = await SeedHiddenPersonalDetailAsync();
+  private Task<Employee> SavedEmployeeAsync(int employeeId) =>
+    _context.Employees.AsNoTracking().SingleAsync(e => e.Id == employeeId);
 
-    var updateDto = new EmployeeUpdateDto
+  [Fact]
+  public async Task UpdateSelfAsync_GenderAndBirthdayFlagsOmitted_KeepsTheCurrentValues()
+  {
+    var employee = await SeedEmployeeWithFlagsAsync(showGender: true, showBirthday: true);
+
+    await _service.UpdateSelfAsync(employee.Id, new EmployeeSelfUpdateDto { Nickname = "Jun" });
+
+    var saved = await SavedEmployeeAsync(employee.Id);
+    Assert.True(saved.ShowGenderInProfile);
+    Assert.True(saved.ShowBirthdayInProfile);
+  }
+
+  [Fact]
+  public async Task UpdateSelfAsync_GenderAndBirthdayFlagsSent_SavesThem()
+  {
+    var employee = await SeedEmployeeWithFlagsAsync();
+
+    var result = await _service.UpdateSelfAsync(employee.Id, new EmployeeSelfUpdateDto
+    {
+      ShowGenderInProfile = true,
+      ShowBirthdayInProfile = true,
+    });
+
+    Assert.True(result!.ShowGenderInProfile);
+    Assert.True(result.ShowBirthdayInProfile);
+
+    var saved = await SavedEmployeeAsync(employee.Id);
+    Assert.True(saved.ShowGenderInProfile);
+    Assert.True(saved.ShowBirthdayInProfile);
+  }
+
+  /// <summary>HR can hide what the employee chose to show (decision S2).</summary>
+  [Fact]
+  public async Task UpdateAsync_HrSendsShowGenderFalse_HidesGender()
+  {
+    var employee = await SeedEmployeeWithFlagsAsync(showGender: true);
+
+    await _service.UpdateAsync(employee.Id, new EmployeeUpdateDto
     {
       FirstName = "Juan",
       LastName = "Cruz",
       Gender = "MALE",
       MaritalStatus = "SINGLE",
       Username = "emp-001",
-      PersonalDetail = new EmployeePersonalDetailUpdateDto
-      {
-        Nickname = "Juanito",   // sent; Bio and ShowInProfile are not
-      },
-    };
+      ShowGenderInProfile = false,
+    });
 
-    // Act
-    await _service.UpdateAsync(employee.Id, updateDto);
-
-    // Assert: the two rules side by side
-    var saved = await _context.EmployeePersonalDetails
-      .AsNoTracking()
-      .SingleAsync(pd => pd.EmployeeId == employee.Id);
-    Assert.Equal("Juanito", saved.Nickname);
-    Assert.Null(saved.Bio);              // omitted text field → cleared (existing rule)
-    Assert.False(saved.ShowInProfile);   // omitted flag → kept (decision S1)
-  }
-
-  [Fact]
-  public async Task UpdateAsync_ShowInProfileFalse_SavesHidden()
-  {
-    // Arrange: a visible employee (the model's default is true)
-    var employee = NewEmployee("Juan", "Cruz", "EMP-001");
-    employee.PersonalDetail = new EmployeePersonalDetail { Nickname = "Jun" };
-    _context.Employees.Add(employee);
-    await _context.SaveChangesAsync();
-
-    var updateDto = new EmployeeUpdateDto
-    {
-      FirstName = "Juan",
-      LastName = "Cruz",
-      Gender = "MALE",
-      MaritalStatus = "SINGLE",
-      Username = "emp-001",
-      PersonalDetail = new EmployeePersonalDetailUpdateDto
-      {
-        Nickname = "Jun",
-        ShowInProfile = false,   // HR hides it (decision S2)
-      },
-    };
-
-    // Act
-    var result = await _service.UpdateAsync(employee.Id, updateDto);
-
-    // Assert
-    Assert.False(result!.PersonalDetail!.ShowInProfile);
-    var saved = await _context.EmployeePersonalDetails
-      .AsNoTracking()
-      .SingleAsync(pd => pd.EmployeeId == employee.Id);
-    Assert.False(saved.ShowInProfile);
-  }
-
-  [Fact]
-  public async Task UpdateSelfAsync_ShowInProfileOmitted_KeepsTheCurrentValue()
-  {
-    // Arrange
-    var employee = await SeedHiddenPersonalDetailAsync();
-
-    // Act
-    await _service.UpdateSelfAsync(employee.Id, new EmployeeSelfUpdateDto { Nickname = "Juanito" });
-
-    // Assert
-    var saved = await _context.EmployeePersonalDetails
-      .AsNoTracking()
-      .SingleAsync(pd => pd.EmployeeId == employee.Id);
-    Assert.Equal("Juanito", saved.Nickname);
-    Assert.False(saved.ShowInProfile);
-  }
-
-  [Fact]
-  public async Task UpdateSelfAsync_ShowInProfileFalse_SavesHidden()
-  {
-    // Arrange: a visible employee
-    var employee = NewEmployee("Juan", "Cruz", "EMP-001");
-    employee.PersonalDetail = new EmployeePersonalDetail { Nickname = "Jun" };
-    _context.Employees.Add(employee);
-    await _context.SaveChangesAsync();
-
-    // Act
-    var result = await _service.UpdateSelfAsync(employee.Id,
-      new EmployeeSelfUpdateDto { Nickname = "Jun", ShowInProfile = false });
-
-    // Assert
-    Assert.False(result!.PersonalDetail!.ShowInProfile);
-    var saved = await _context.EmployeePersonalDetails
-      .AsNoTracking()
-      .SingleAsync(pd => pd.EmployeeId == employee.Id);
-    Assert.False(saved.ShowInProfile);
+    Assert.False((await SavedEmployeeAsync(employee.Id)).ShowGenderInProfile);
   }
 }
