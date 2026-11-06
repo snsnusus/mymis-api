@@ -5,7 +5,7 @@ using MyMIS.Api.Validation;
 
 namespace MyMIS.Api.DTOs;
 
-public class EmployeeCreateDto : IValidatableObject
+public class EmployeeCreateDto
 {
   [Required, MaxLength(100)]
   public string FirstName { get; set; } = string.Empty;
@@ -90,20 +90,4 @@ public class EmployeeCreateDto : IValidatableObject
   // Set → the creator also needs roles.assign and must pass the escalation guard.
   // Deliberately NOT [Required]: leaving it out is a normal, valid request.
   public int? RoleId { get; set; }
-
-  /// <summary> 
-  /// Alternative to RoleId, never both.
-  /// </summary>
-  public CustomRoleCreateDto? CustomRole { get; set; }
-
-  public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-  {
-    if (RoleId is not null && CustomRole is not null)
-    {
-      yield return new ValidationResult(
-        "Choose an existing role or create a custom one, not both.",
-        [nameof(CustomRole)]
-      );
-    }
-  }
 }
