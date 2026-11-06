@@ -124,6 +124,8 @@ public class AuthorizationWiringTests(ApiFactory factory)
     // Role assignment (company-only, so gate 1 is the whole check)
     { "GET", $"/api/Employees/{Missing}/role", PermissionNames.Roles.Read },
     { "PUT", $"/api/Employees/{Missing}/role", PermissionNames.Roles.Assign },
+
+
   };
 
   // Routes that only need a login (a plain [Authorize]): self-service, the
@@ -141,6 +143,7 @@ public class AuthorizationWiringTests(ApiFactory factory)
     { "GET", "/api/Employees/me/government-ids" },
     { "GET", "/api/Employees/me/hmo" },
     { "POST", "/api/Auth/change-password" },
+    { "GET", "/api/Auth/me/permissions" },
   };
 
   private static async Task<HttpStatusCode> SendAsync(HttpClient client, string method, string url)

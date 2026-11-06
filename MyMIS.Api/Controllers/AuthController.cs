@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyMIS.Api.Authorization;
 using MyMIS.Api.DTOs;
+using MyMIS.Api.Helpers;
 using MyMIS.Api.Services;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -9,9 +10,10 @@ namespace MyMIS.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(AuthService authService) : ControllerBase
+public class AuthController(AuthService authService, IRolePermissionCache rolePermissions) : ControllerBase
 {
   private readonly AuthService _authService = authService;
+  private readonly IRolePermissionCache _rolePermissions = rolePermissions;
 
   [HttpPost("login")]
   public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto)
@@ -72,5 +74,25 @@ public class AuthController(AuthService authService) : ControllerBase
     }
 
     return NoContent();
+  }
+
+  [Authorize]
+  [HttpGet("me/permissions")]
+  public async Task<ActionResult<MyPermissionsResponseDto>> GetMyPermissions()
+  {
+    if (User.GetRoleId() is not int roleId) return Unauthorized();
+
+    var permissions = await _rolePermissions.GetAsync(roleId);
+
+    return Ok(new MyPermissionsResponseDto
+    {
+      Permissions = [.. permissions
+      .OrderBy(p => p.Key)
+      .Select(p => new RolePermissionResponseDto
+      {
+        Permission = p.Key,
+        Scope = p.Value,
+      })],
+    });
   }
 }
