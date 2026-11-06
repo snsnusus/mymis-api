@@ -693,4 +693,114 @@ public class RoleServiceTests : IDisposable
     Assert.True(catalog.Single(p => p.Name == PermissionNames.Employees.Read).Customizable);
     Assert.False(catalog.Single(p => p.Name == PermissionNames.Employees.Update).Customizable);
   }
+
+  private static CustomRoleCreateDto NewCustomRoleDto(string name, params string[] permissions) => new()
+  {
+    Name = name,
+    Permissions = [.. permissions],
+  };
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_ValidRequest_BuildsADepartmentScopedCustomRoleWithoutSaving()
+  {
+    var (service, _) = ServiceForAllPermissions();
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("  Team Lead  ", PermissionNames.Employees.Read, PermissionNames.Positions.Update),
+      CallerRoleId);
+
+    Assert.True(result.IsSuccess);
+    var role = result.Value!;
+    Assert.Equal("Team Lead", role.Name);
+    Assert.Equal("TEAM LEAD", role.NormalizedName);
+    Assert.True(role.IsCustom);
+    Assert.Equal(2, role.RolePermissions.Count);
+    Assert.All(role.RolePermissions, rp => Assert.Equal(PermissionScope.Department, rp.Scope));
+    Assert.False(await _context.Roles.AnyAsync(r => r.NormalizedName == "TEAM LEAD"));
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_NameDiffersOnlyInCase_ReturnsConflict()
+  {
+    await SeedRoleAsync("Team Lead");
+    var (service, _) = ServiceForAllPermissions();
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("team lead", PermissionNames.Employees.Read), CallerRoleId);
+
+    Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_PermissionNotCustomizable_ReturnsValidationEvenWhenTheCallerHoldsIt()
+  {
+    var (service, _) = ServiceForAllPermissions();
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("Team Lead", PermissionNames.Employees.Update), CallerRoleId);
+
+    Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+    Assert.Contains(PermissionNames.Employees.Update, result.ErrorMessage);
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_UnknownPermission_ReturnsValidation()
+  {
+    var (service, _) = ServiceForAllPermissions();
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("Team Lead", "employees.fly"), CallerRoleId);
+
+    Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_PermissionListedTwice_ReturnsValidation()
+  {
+    var (service, _) = ServiceForAllPermissions();
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("Team Lead", PermissionNames.Employees.Read, PermissionNames.Employees.Read),
+      CallerRoleId);
+
+    Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_CallerDoesNotHoldThePermission_ReturnsForbidden()
+  {
+    var (service, _) = ServiceFor((PermissionNames.Departments.Read, PermissionScope.Company));
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("Team Lead", PermissionNames.Employees.Read), CallerRoleId);
+
+    Assert.Equal(ServiceErrorType.Forbidden, result.ErrorType);
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_CallerHoldsThePermissionAtDepartmentScope_Succeeds()
+  {
+    var (service, _) = ServiceFor((PermissionNames.Employees.Read, PermissionScope.Department));
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("Team Lead", PermissionNames.Employees.Read), CallerRoleId);
+
+    Assert.True(result.IsSuccess);
+  }
+
+  [Fact]
+  public async Task BuildCustomRoleAsync_PermissionNameWithWhitespace_IsTrimmed()
+  {
+    var (service, _) = ServiceForAllPermissions();
+
+    var result = await service.BuildCustomRoleAsync(
+      NewCustomRoleDto("Team Lead", "  employees.read  "), CallerRoleId);
+
+    Assert.True(result.IsSuccess);
+    var employeesReadId = await _context.Permissions
+      .Where(p => p.Name == PermissionNames.Employees.Read)
+      .Select(p => p.Id)
+      .SingleAsync();
+    Assert.Equal(employeesReadId, Assert.Single(result.Value!.RolePermissions).PermissionId);
+  }
 }

@@ -202,8 +202,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
     return role;
   }
 
-  // ---------------- write ----------------
-
   // POST /api/Roles
   public async Task<ServiceResult<RoleResponseDto>> CreateAsync(RoleCreateDto dto, int callerRoleId)
   {
@@ -242,6 +240,60 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
     // No cache invalidation: nobody holds a brand-new role yet.
     return ServiceResult<RoleResponseDto>.Success(
       await GetByIdAsync(role.Id) ?? throw new InvalidOperationException("Failed to reload newly created role."));
+  }
+
+  /// <summary>
+  /// Checks a custom role requested during employee creation and builds it without saving,
+  /// so the caller can save it in the same <c>SaveChanges</c> as the new employee.
+  /// Every permission is granted at <c>Department</c> scope and must be in
+  /// <see cref="PermissionNames.Customizable"/>.
+  /// </summary>
+  /// <param name="dto">The requested name, optional description and permission names.</param>
+  /// <param name="callerRoleId">The creator's role; the escalation guard checks its permissions.</param>
+  /// <returns>
+  /// The unsaved role on success; <c>Conflict</c> when the name is taken; <c>Validation</c> when a
+  /// permission isn't customizable or is listed twice; <c>Forbidden</c> when the creator's own role
+  /// doesn't hold a permission at <c>Department</c> scope or wider.
+  /// </returns>
+  public async Task<ServiceResult<Role>> BuildCustomRoleAsync(CustomRoleCreateDto dto, int callerRoleId)
+  {
+    var normalized = NormalizeName(dto.Name);
+    if (await NameExistsAsync(normalized))
+    {
+      return ServiceResult<Role>.Conflict($"A role named '{dto.Name.Trim()}' already exists.");
+    }
+
+    List<(string Name, PermissionScope Scope)> requested =
+     [.. dto.Permissions!.Select(p => (p.Trim(), PermissionScope.Department))];
+
+    var notCustomizable = requested.FirstOrDefault(p => !PermissionNames.Customizable.Contains(p.Name)).Name;
+    if (notCustomizable is not null)
+    {
+      return ServiceResult<Role>.Invalid(
+        $"'{notCustomizable}' can't be granted in a custom role. Use the Roles page for that.");
+    }
+
+    var validation = await ValidatePermissionsAsync(requested, callerRoleId);
+    if (!validation.IsSuccess)
+    {
+      return Fail<Role>(validation);
+    }
+
+    var now = DateTime.UtcNow;
+    return ServiceResult<Role>.Success(new Role
+    {
+      Name = dto.Name.Trim(),
+      NormalizedName = normalized,
+      Description = TrimOrNull(dto.Description),
+      IsCustom = true,
+      CreatedAt = now,
+      UpdatedAt = now,
+      RolePermissions = [.. validation.Value!.Select(pair => new RolePermission
+      {
+        PermissionId = pair.Key,
+        Scope = pair.Value,
+      })],
+    });
   }
 
   // PUT /api/Roles/{id}: renames, re-describes, and REPLACES the permission list (R1).
