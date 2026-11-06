@@ -1063,9 +1063,6 @@ namespace MyMIS.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<bool>("IsCustom")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsSystem")
                         .HasColumnType("boolean");
 

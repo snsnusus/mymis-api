@@ -394,24 +394,6 @@ public class RoleServiceTests : IDisposable
   }
 
   [Fact]
-  public async Task UpdateAsync_CustomRole_KeepsIsCustom()
-  {
-    var role = await SeedRoleAsync("Team Lead", (PermissionNames.Offices.Read, PermissionScope.Department));
-    role.IsCustom = true;
-    await _context.SaveChangesAsync();
-    var (service, _) = ServiceForAllPermissions();
-
-    var result = await service.UpdateAsync(
-      role.Id,
-      NewDto("Team Lead", (PermissionNames.Departments.Read, PermissionScope.Department)),
-      CallerRoleId);
-
-    Assert.True(result.IsSuccess);
-    var saved = await _context.Roles.AsNoTracking().SingleAsync(r => r.Id == role.Id);
-    Assert.True(saved.IsCustom);
-  }
-
-  [Fact]
   public async Task CloneAsync_NormalRole_CopiesPermissionsScopesAndDescription()
   {
     // Arrange
@@ -514,19 +496,6 @@ public class RoleServiceTests : IDisposable
     Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
   }
 
-  [Fact]
-  public async Task CloneAsync_CustomRole_CreatesARegularRole()
-  {
-    var source = await SeedRoleAsync("Team Lead", (PermissionNames.Offices.Read, PermissionScope.Department));
-    source.IsCustom = true;
-    await _context.SaveChangesAsync();
-    var (service, _) = ServiceForAllPermissions();
-
-    var result = await service.CloneAsync(source.Id, new RoleCloneDto { Name = "Team Lead Template" }, CallerRoleId);
-
-    Assert.True(result.IsSuccess);
-    Assert.False(result.Value!.IsCustom);
-  }
 
   [Fact]
   public async Task DeleteAsync_RoleDoesNotExist_ReturnsNotFound()
@@ -627,20 +596,6 @@ public class RoleServiceTests : IDisposable
     Assert.Equal(1, roles.Single(r => r.Id == role.Id).EmployeeCount);
   }
 
-  [Fact]
-  public async Task GetAllAsync_ReturnsIsCustomForEachRole()
-  {
-    var custom = await SeedRoleAsync("Team Lead");
-    custom.IsCustom = true;
-    await _context.SaveChangesAsync();
-    var regular = await SeedRoleAsync("HR");
-    var (service, _) = ServiceForAllPermissions();
-
-    var roles = await service.GetAllAsync();
-
-    Assert.True(roles.Single(r => r.Id == custom.Id).IsCustom);
-    Assert.False(roles.Single(r => r.Id == regular.Id).IsCustom);
-  }
 
   [Fact]
   public async Task GetByIdAsync_SystemRole_ShowsEveryPermissionCompanyWide()
@@ -659,19 +614,6 @@ public class RoleServiceTests : IDisposable
     Assert.All(role.Permissions, p => Assert.Equal(PermissionScope.Company, p.Scope));
   }
 
-  [Fact]
-  public async Task GetByIdAsync_CustomRole_ReturnsIsCustom()
-  {
-    var custom = await SeedRoleAsync("Team Lead");
-    custom.IsCustom = true;
-    await _context.SaveChangesAsync();
-    var (service, _) = ServiceForAllPermissions();
-
-    var role = await service.GetByIdAsync(custom.Id);
-
-    Assert.NotNull(role);
-    Assert.True(role.IsCustom);
-  }
 
   [Fact]
   public void GetPermissionCatalog_ListsEveryPermissionWithItsCompanyOnlyFlag()
@@ -685,12 +627,4 @@ public class RoleServiceTests : IDisposable
     Assert.False(catalog.Single(p => p.Name == PermissionNames.Employees.Read).CompanyOnly);
   }
 
-  [Fact]
-  public void GetPermissionCatalog_FlagsCustomizablePermissions()
-  {
-    var catalog = RoleService.GetPermissionCatalog();
-
-    Assert.True(catalog.Single(p => p.Name == PermissionNames.Employees.Read).Customizable);
-    Assert.False(catalog.Single(p => p.Name == PermissionNames.Employees.Update).Customizable);
-  }
 }

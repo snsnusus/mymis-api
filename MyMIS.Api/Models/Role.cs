@@ -8,8 +8,6 @@ public class Role
   // and the role can't be edited, deleted, or left without an employee.
   public bool IsSystem { get; set; }
 
-  public bool IsCustom { get; set; }
-
   public int Id { get; set; }
 
   [Required]

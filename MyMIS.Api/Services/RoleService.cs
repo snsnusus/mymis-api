@@ -123,7 +123,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
       {
         Name = name,
         CompanyOnly = PermissionNames.CompanyOnly.Contains(name),
-        Customizable = PermissionNames.Customizable.Contains(name)
       })];
 
   // GET /api/Roles: every role with how many (active) employees hold it.
@@ -138,7 +137,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
         Name = r.Name,
         Description = r.Description,
         IsSystem = r.IsSystem,
-        IsCustom = r.IsCustom,
         // A COUNT SUBQUERY: EF turns this into
         //   (SELECT COUNT(*) FROM "Employees" e WHERE e."RoleId" = r."Id" AND e."DeletedAt" IS NULL)
         // inside the same SQL statement, one query for the whole list, not one per role.
@@ -160,7 +158,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
         Name = r.Name,
         Description = r.Description,
         IsSystem = r.IsSystem,
-        IsCustom = r.IsCustom,
         EmployeeCount = _context.Employees.Count(e => e.RoleId == r.Id),
         CreatedAt = r.CreatedAt,
         UpdatedAt = r.UpdatedAt,
@@ -356,7 +353,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
       // null = copy the source's description; anything else replaces it.
       Description = dto.Description is null ? source.Description : TrimOrNull(dto.Description),
       IsSystem = false,   // never copied
-      IsCustom = false,   // never copied
       CreatedAt = now,
       UpdatedAt = now,
       RolePermissions = [.. validation.Value!.Select(pair => new RolePermission
