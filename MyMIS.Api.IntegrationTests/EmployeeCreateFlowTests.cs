@@ -513,22 +513,6 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
     Assert.NotEmpty(revokedAt);
     Assert.All(revokedAt, r => Assert.NotNull(r));
   }
-
-  // ---------------- starting role (A2): optional roleId on create ----------------
-
-  // Creates a role (as SuperAdmin) holding these permissions company-wide.
-  private async Task<RoleResponseDto> CreateRoleAsync(params string[] permissions)
-  {
-    var admin = await factory.GetSuperAdminClientAsync();
-    var response = await admin.PostAsJsonAsync("/api/Roles", new
-    {
-      name = $"Onboard {Unique()}",
-      permissions = permissions.Select(permission => new { permission, scope = "Company" }).ToArray(),
-    });
-    await HttpAssert.StatusAsync(HttpStatusCode.Created, response);
-    return (await response.Content.ReadFromJsonAsync<RoleResponseDto>())!;
-  }
-
   private Task<int> SavedRoleIdAsync(int employeeId) =>
     factory.QueryDbAsync(db => db.Employees
       .Where(e => e.Id == employeeId)
@@ -536,96 +520,20 @@ public class EmployeeCreateFlowTests(ApiFactory factory)
       .FirstAsync());
 
   [Fact]
-  public async Task PostEmployee_WithoutARoleId_GetsTheEmployeeRole()
+  public async Task PostEmployee_WithARoleIdInTheBody_IgnoresItAndGivesTheEmployeeRole()
   {
-    // Arrange
-    var client = await CreatorClientAsync();
+    var client = await factory.GetSuperAdminClientAsync();
+    var superAdminRoleId = await factory.QueryDbAsync(db => db.GetRoleIdAsync(SystemRoleNames.SuperAdmin));
     var request = NewRequest(await NewBarangayIdAsync());
+    request.Body["roleId"] = superAdminRoleId;
 
-    // Act
     var response = await PostAsync(client, request);
 
-    // Assert
     await HttpAssert.StatusAsync(HttpStatusCode.Created, response);
     using var json = await ReadJsonAsync(response);
     var employeeId = json.RootElement.GetProperty("id").GetInt32();
 
     var employeeRoleId = await factory.QueryDbAsync(db => db.GetRoleIdAsync(SystemRoleNames.Employee));
     Assert.Equal(employeeRoleId, await SavedRoleIdAsync(employeeId));
-  }
-
-  [Fact]
-  public async Task PostEmployee_WithARoleIdButWithoutRolesAssign_Returns403OnRoleIdAndSavesNothing()
-  {
-    // Arrange: the standard creator holds employees.create only
-    var client = await CreatorClientAsync();
-    var role = await CreateRoleAsync(PermissionNames.Offices.Read);
-    var request = NewRequest(await NewBarangayIdAsync());
-    request.Body["roleId"] = role.Id;
-
-    // Act
-    var response = await PostAsync(client, request);
-
-    // Assert: a field-keyed 403 the form can show under the role picker
-    await HttpAssert.StatusAsync(HttpStatusCode.Forbidden, response);
-    using var json = await ReadJsonAsync(response);
-    Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("RoleId", out _));
-    await AssertSavedCountsAsync(request, employees: 0, emails: 0, phones: 0, contacts: 0);
-  }
-
-  [Fact]
-  public async Task PostEmployee_WithAnUnknownRoleId_Returns400OnRoleId()
-  {
-    // Arrange
-    var client = await factory.GetClientAsync(PermissionNames.Employees.Create, PermissionNames.Roles.Assign);
-    var request = NewRequest(await NewBarangayIdAsync());
-    request.Body["roleId"] = Missing;
-
-    // Act
-    var response = await PostAsync(client, request);
-
-    // Assert
-    await HttpAssert.StatusAsync(HttpStatusCode.BadRequest, response);
-    using var json = await ReadJsonAsync(response);
-    Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("RoleId", out _));
-  }
-
-  [Fact]
-  public async Task PostEmployee_WithARoleBeyondTheCreatorsOwn_Returns403OnRoleId()
-  {
-    // Arrange: the creator may assign roles, but the role holds hmo-providers.read, which they don't
-    var client = await factory.GetClientAsync(PermissionNames.Employees.Create, PermissionNames.Roles.Assign);
-    var role = await CreateRoleAsync(PermissionNames.HmoProviders.Read);
-    var request = NewRequest(await NewBarangayIdAsync());
-    request.Body["roleId"] = role.Id;
-
-    // Act
-    var response = await PostAsync(client, request);
-
-    // Assert: the escalation guard, applied at create time too
-    await HttpAssert.StatusAsync(HttpStatusCode.Forbidden, response);
-    using var json = await ReadJsonAsync(response);
-    Assert.True(json.RootElement.GetProperty("errors").TryGetProperty("RoleId", out _));
-    await AssertSavedCountsAsync(request, employees: 0, emails: 0, phones: 0, contacts: 0);
-  }
-
-  [Fact]
-  public async Task PostEmployee_WithARoleTheCreatorMayAssign_NewEmployeeHoldsIt()
-  {
-    // Arrange: the creator holds offices.read too, so they cover the role's only permission
-    var client = await factory.GetClientAsync(
-      PermissionNames.Employees.Create, PermissionNames.Roles.Assign, PermissionNames.Offices.Read);
-    var role = await CreateRoleAsync(PermissionNames.Offices.Read);
-    var request = NewRequest(await NewBarangayIdAsync());
-    request.Body["roleId"] = role.Id;
-
-    // Act
-    var response = await PostAsync(client, request);
-
-    // Assert
-    await HttpAssert.StatusAsync(HttpStatusCode.Created, response);
-    using var json = await ReadJsonAsync(response);
-    var employeeId = json.RootElement.GetProperty("id").GetInt32();
-    Assert.Equal(role.Id, await SavedRoleIdAsync(employeeId));
   }
 }

@@ -332,8 +332,7 @@ public class EmployeeService(
       }
     };
 
-    var roleId = dto.RoleId
-      ?? await _context.Roles
+    var roleId = await _context.Roles
         .Where(r => r.NormalizedName == SystemRoleNames.Employee)
         .Select(r => (int?)r.Id)
         .FirstOrDefaultAsync()

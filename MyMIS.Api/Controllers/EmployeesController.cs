@@ -91,27 +91,6 @@ public class EmployeesController(
       return Unauthorized();
     }
 
-    // A2: an optional starting role. Omitted → the Employee role (handled in the service).
-    // Set → the creator must hold roles.assign AND pass the same rules as assigning later
-    // (the role exists, SuperAdmin only by a SuperAdmin, the escalation guard).
-    if (dto.RoleId is int requestedRoleId)
-    {
-      var canAssign = (await _authorizationService.AuthorizeAsync(User, PermissionNames.Roles.Assign)).Succeeded;
-      if (!canAssign || User.GetRoleId() is not int callerRoleId)
-      {
-        return RoleIdProblem(StatusCodes.Status403Forbidden, "You don't have permission to choose a role for a new employee.");
-      }
-
-      var roleCheck = await _roleAssignmentService.CheckCanAssignAsync(requestedRoleId, callerRoleId);
-      if (!roleCheck.IsSuccess)
-      {
-        var status = roleCheck.ErrorType == ServiceErrorType.Forbidden
-          ? StatusCodes.Status403Forbidden
-          : StatusCodes.Status400BadRequest;
-        return RoleIdProblem(status, roleCheck.ErrorMessage!);
-      }
-    }
-
     var (_, contactError) = await _emergencyContactService.ValidateAsync(dto.EmergencyContact!);
     if (contactError is not null)
     {

@@ -85,9 +85,4 @@ public class EmployeeCreateDto
   // Optional. Null or all-blank means nothing recorded yet; HR can add them later
   // through PUT /api/Employees/{id}/government-ids.
   public EmployeeGovernmentIdUpdateDto? GovernmentIds { get; set; }
-
-  // Optional (A2). Omitted/null → the new employee gets the Employee role.
-  // Set → the creator also needs roles.assign and must pass the escalation guard.
-  // Deliberately NOT [Required]: leaving it out is a normal, valid request.
-  public int? RoleId { get; set; }
 }
