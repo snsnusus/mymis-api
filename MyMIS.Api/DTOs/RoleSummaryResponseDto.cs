@@ -10,5 +10,7 @@ public class RoleSummaryResponseDto
 
   public bool IsSystem { get; set; }
 
+  public bool IsCustom { get; set; }
+
   public int EmployeeCount { get; set; }
 }

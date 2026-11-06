@@ -114,10 +114,7 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
       requested.ToDictionary(p => ids[p.Name], p => p.Scope));
   }
 
-  // ---------------- permission catalog ----------------
-
   // GET /api/Permissions. No database: the catalog IS PermissionNames.All
-  // (SmokeTests prove the Permissions table matches it exactly).
   // `static`: uses no instance fields, so it doesn't need a RoleService object.
   public static List<PermissionResponseDto> GetPermissionCatalog() =>
     [.. PermissionNames.All
@@ -128,8 +125,6 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
         CompanyOnly = PermissionNames.CompanyOnly.Contains(name),
         Customizable = PermissionNames.Customizable.Contains(name)
       })];
-
-  // ---------------- read ----------------
 
   // GET /api/Roles: every role with how many (active) employees hold it.
   public async Task<List<RoleSummaryResponseDto>> GetAllAsync()
@@ -143,6 +138,7 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
         Name = r.Name,
         Description = r.Description,
         IsSystem = r.IsSystem,
+        IsCustom = r.IsCustom,
         // A COUNT SUBQUERY: EF turns this into
         //   (SELECT COUNT(*) FROM "Employees" e WHERE e."RoleId" = r."Id" AND e."DeletedAt" IS NULL)
         // inside the same SQL statement, one query for the whole list, not one per role.
@@ -164,6 +160,7 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
         Name = r.Name,
         Description = r.Description,
         IsSystem = r.IsSystem,
+        IsCustom = r.IsCustom,
         EmployeeCount = _context.Employees.Count(e => e.RoleId == r.Id),
         CreatedAt = r.CreatedAt,
         UpdatedAt = r.UpdatedAt,
@@ -358,7 +355,8 @@ public class RoleService(AppDbContext context, IRolePermissionCache rolePermissi
       NormalizedName = normalized,
       // null = copy the source's description; anything else replaces it.
       Description = dto.Description is null ? source.Description : TrimOrNull(dto.Description),
-      IsSystem = false,   // never copied (R4)
+      IsSystem = false,   // never copied
+      IsCustom = false,   // never copied
       CreatedAt = now,
       UpdatedAt = now,
       RolePermissions = [.. validation.Value!.Select(pair => new RolePermission
